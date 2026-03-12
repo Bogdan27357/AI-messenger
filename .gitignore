@@ -1,0 +1,12 @@
+node_modules/
+dist/
+build/
+uploads/avatars/*
+uploads/attachments/*
+uploads/voice/*
+uploads/video/*
+uploads/knowledge/*
+!uploads/**/.gitkeep
+.env
+*.log
+.DS_Store

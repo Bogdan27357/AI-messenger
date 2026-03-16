@@ -203,6 +203,35 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Hero banner */
+.hero {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 32px;
+  padding: 24px 28px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  backdrop-filter: blur(10px);
+}
+
+.hero-logo {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+  border-radius: 16px;
+  flex-shrink: 0;
+}
+
+.hero-text .page-title {
+  margin-bottom: 6px;
+}
+
+.hero-text .page-subtitle {
+  margin-bottom: 0;
+}
+
 .page-title {
   font-size: 32px;
   font-weight: 700;

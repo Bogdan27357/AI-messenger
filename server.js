@@ -11,62 +11,63 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Helper: fetch from Deezer API (free, no key required)
-async function deezerFetch(endpoint) {
-  const response = await fetch(`https://api.deezer.com${endpoint}`);
+// Jamendo API (free full-length tracks)
+const JAMENDO_CLIENT_ID = process.env.JAMENDO_CLIENT_ID || 'dad70181';
+
+async function jamendoFetch(endpoint) {
+  const url = `https://api.jamendo.com/v3.0${endpoint}`;
+  const response = await fetch(url);
   const data = await response.json();
-  if (data.error) throw new Error(data.error.message);
+  if (data.headers && data.headers.status === 'error') {
+    throw new Error(data.headers.error_message || 'Jamendo API error');
+  }
   return data;
 }
 
-// Normalize Deezer track to our format
 function normalizeTracks(tracks) {
-  return tracks
-    .filter(t => t.preview)
-    .map(t => ({
-      id: t.id,
-      name: t.title || t.title_short,
-      artist_name: t.artist?.name || 'Unknown',
-      album_image: t.album?.cover_medium || t.album?.cover || '',
-      audio: t.preview,
-      duration: t.duration || 30,
-      genre: ''
-    }));
+  return (tracks || []).filter(t => t.audio).map(t => ({
+    id: t.id,
+    name: t.name,
+    artist_name: t.artist_name,
+    album_image: t.album_image || t.image || '',
+    audio: t.audio,
+    duration: t.duration,
+    genre: t.musicinfo?.tags?.genres?.[0] || ''
+  }));
 }
 
 // Search tracks
 app.get('/api/search', async (req, res) => {
   try {
     const query = req.query.q || 'popular';
-    const data = await deezerFetch(`/search?q=${encodeURIComponent(query)}&limit=25`);
-    res.json({ results: normalizeTracks(data.data || []) });
+    const data = await jamendoFetch(`/tracks/?client_id=${JAMENDO_CLIENT_ID}&format=json&limit=25&search=${encodeURIComponent(query)}&include=musicinfo&audioformat=mp32`);
+    res.json({ results: normalizeTracks(data.results) });
   } catch (err) {
-    console.error('Deezer search error:', err);
-    res.status(500).json({ error: 'Failed to fetch music', results: [] });
+    console.error('Jamendo search error:', err.message);
+    res.status(500).json({ error: err.message, results: [] });
   }
 });
 
-// Popular / chart tracks
+// Popular tracks
 app.get('/api/tracks/popular', async (req, res) => {
   try {
-    const data = await deezerFetch('/chart/0/tracks?limit=30');
-    res.json({ results: normalizeTracks(data.data || []) });
+    const data = await jamendoFetch(`/tracks/?client_id=${JAMENDO_CLIENT_ID}&format=json&limit=30&order=popularity_total&include=musicinfo&audioformat=mp32`);
+    res.json({ results: normalizeTracks(data.results) });
   } catch (err) {
-    console.error('Deezer chart error:', err);
-    res.status(500).json({ error: 'Failed to fetch popular tracks', results: [] });
+    console.error('Jamendo popular error:', err.message);
+    res.status(500).json({ error: err.message, results: [] });
   }
 });
 
-// Tracks by genre
+// Tracks by genre/tag
 app.get('/api/tracks/bygenre', async (req, res) => {
   try {
     const genre = req.query.genre || 'pop';
-    // Search by genre name as query
-    const data = await deezerFetch(`/search?q=${encodeURIComponent(genre)}&limit=25`);
-    res.json({ results: normalizeTracks(data.data || []) });
+    const data = await jamendoFetch(`/tracks/?client_id=${JAMENDO_CLIENT_ID}&format=json&limit=25&tags=${encodeURIComponent(genre)}&include=musicinfo&audioformat=mp32&order=popularity_total`);
+    res.json({ results: normalizeTracks(data.results) });
   } catch (err) {
-    console.error('Deezer genre error:', err);
-    res.status(500).json({ error: 'Failed to fetch tracks by genre', results: [] });
+    console.error('Jamendo genre error:', err.message);
+    res.status(500).json({ error: err.message, results: [] });
   }
 });
 
@@ -78,12 +79,12 @@ app.post('/api/recommend', async (req, res) => {
     if (!listeningHistory || listeningHistory.length === 0) {
       return res.json({
         recommendation: 'Начните слушать музыку, и я смогу предложить вам треки на основе ваших предпочтений!',
-        searchQueries: ['popular hits', 'chill vibes', 'electronic']
+        searchQueries: ['popular', 'chill', 'electronic']
       });
     }
 
     const historyText = listeningHistory
-      .map(t => `"${t.name}" by ${t.artist_name}`)
+      .map(t => `"${t.name}" by ${t.artist_name}${t.genre ? ` (${t.genre})` : ''}`)
       .join('\n');
 
     const prompt = `You are a music recommendation AI assistant. Based on the user's listening history below, suggest what kind of music they might enjoy next.
@@ -135,7 +136,7 @@ QUERIES: query1, query2, query3`;
     console.error('Ollama error:', err.message);
     res.json({
       recommendation: 'ИИ-сервис временно недоступен. Убедитесь, что Ollama запущена (ollama serve). Показываю популярные треки.',
-      searchQueries: ['popular hits', 'trending music', 'best songs'],
+      searchQueries: ['popular', 'trending', 'best'],
       error: true
     });
   }
@@ -148,4 +149,5 @@ app.get('*', (req, res) => {
 app.listen(PORT, () => {
   console.log(`🎵 AI Music Recommender running at http://localhost:${PORT}`);
   console.log(`🤖 Ollama URL: ${OLLAMA_URL} (model: ${OLLAMA_MODEL})`);
+  console.log(`🎶 Jamendo Client ID: ${JAMENDO_CLIENT_ID}`);
 });

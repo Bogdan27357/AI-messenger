@@ -14,26 +14,5 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
-  ollama:
-    image: ollama/ollama:latest
-    container_name: ai-messenger-ollama
-    restart: unless-stopped
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-
-  qdrant:
-    image: qdrant/qdrant:latest
-    container_name: ai-messenger-qdrant
-    restart: unless-stopped
-    ports:
-      - "6333:6333"
-      - "6334:6334"
-    volumes:
-      - qdrant_data:/qdrant/storage
-
 volumes:
   postgres_data:
-  ollama_data:
-  qdrant_data:

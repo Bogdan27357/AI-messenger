@@ -25,13 +25,13 @@
 
 ## Быстрый старт
 
-### 1. Поднимаем базу и AI
+### 1. Поднимаем базу данных
 
 ```bash
 docker-compose up -d
 ```
 
-Это запустит PostgreSQL (порт 5432), Ollama (порт 11434) и Qdrant (порт 6333).
+Это запустит PostgreSQL (порт 5432). Ollama и Qdrant уже стоят на сервере компании.
 
 ### 2. Настраиваем переменные окружения
 
@@ -39,15 +39,15 @@ docker-compose up -d
 cp .env.example .env
 ```
 
-Основные переменные:
+Открой `.env` и впиши адреса корпоративных сервисов:
 
 ```
-DATABASE_URL=postgresql://user:password@localhost:5432/ai_messenger
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/ai_messenger
 JWT_SECRET=ваш-секретный-ключ
 JWT_REFRESH_SECRET=ещё-один-секретный-ключ
-OLLAMA_URL=http://localhost:11434
+OLLAMA_URL=http://АДРЕС_СЕРВЕРА:11434
 OLLAMA_MODEL=llama3.2
-QDRANT_URL=http://localhost:6333
+QDRANT_URL=http://АДРЕС_СЕРВЕРА:6333
 ```
 
 ### 3. Устанавливаем зависимости и готовим базу
@@ -59,12 +59,6 @@ npm run db:seed
 ```
 
 Seed создаст аккаунт администратора: `admin@messenger.local` / `admin`
-
-Также нужно скачать модель для эмбеддингов (один раз):
-
-```bash
-docker exec ai-messenger-ollama ollama pull nomic-embed-text
-```
 
 ### 4. Запускаем
 
@@ -115,4 +109,4 @@ npm run dev
 
 **Звонки** — сигналинг через Socket.io, медиа напрямую между браузерами через WebRTC. Используются STUN-серверы Google для прохода через NAT.
 
-**AI-ассистент** — запросы к локальному Ollama. Перед ответом делает векторный поиск по базе знаний через Qdrant (эмбеддинги генерирует модель nomic-embed-text) и подставляет релевантные документы в контекст. Документы загружает админ через админку.
+**AI-ассистент** — запросы к Ollama на сервере компании. Перед ответом делает векторный поиск по базе знаний через Qdrant (эмбеддинги генерирует модель nomic-embed-text) и подставляет релевантные документы в контекст. Документы загружает админ через админку.

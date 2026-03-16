@@ -330,7 +330,11 @@ function playTrack(track) {
   audio.src = track.audio;
   audio.play();
 
-  playerCover.src = track.album_image || track.image || '';
+  const cover = track.album_image || track.image || '';
+  if (cover) {
+    playerCover.src = cover;
+    playerCover.style.display = '';
+  }
   playerTitle.textContent = track.name;
   playerArtist.textContent = track.artist_name;
 

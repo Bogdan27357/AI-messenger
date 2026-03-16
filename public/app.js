@@ -93,13 +93,15 @@ async function loadByGenre(genre) {
   }
 }
 
+// === Track data store ===
+const trackStore = {};
+
 // === Rendering ===
 function renderTrackGrid(containerId, tracks) {
   const container = document.getElementById(containerId);
-  // Store tracks data globally for onclick
-  window[`trackGridData_${containerId}`] = tracks;
+  trackStore[containerId] = tracks;
   container.innerHTML = tracks.map((track, i) => `
-    <div class="track-card ${isCurrentTrack(track) ? 'playing' : ''}" data-index="${i}" onclick="playFromList(trackGridData_${containerId}, ${i})">
+    <div class="track-card ${isCurrentTrack(track) ? 'playing' : ''}" data-container="${containerId}" data-index="${i}">
       <img class="track-card-cover" src="${track.album_image || ''}" alt="${escapeHtml(track.name)}" loading="lazy">
       <div class="track-card-title">${escapeHtml(track.name)}</div>
       <div class="track-card-artist">${escapeHtml(track.artist_name)}</div>
@@ -113,10 +115,9 @@ function renderTrackList(containerId, tracks) {
     container.innerHTML = '<div class="empty-state"><p>Ничего не найдено</p></div>';
     return;
   }
-  // Store tracks data globally for onclick
-  window[`trackListData_${containerId}`] = tracks;
+  trackStore[containerId] = tracks;
   container.innerHTML = tracks.map((track, i) => `
-    <div class="track-row ${isCurrentTrack(track) ? 'playing' : ''}" onclick="playFromList(trackListData_${containerId}, ${i})">
+    <div class="track-row ${isCurrentTrack(track) ? 'playing' : ''}" data-container="${containerId}" data-index="${i}">
       <div class="track-row-num">
         ${isCurrentTrack(track) && state.isPlaying ?
           '<div class="eq-bars"><span></span><span></span><span></span></div>' :
@@ -131,6 +132,18 @@ function renderTrackList(containerId, tracks) {
     </div>
   `).join('');
 }
+
+// Event delegation for track clicks
+document.addEventListener('click', (e) => {
+  const card = e.target.closest('.track-card, .track-row');
+  if (!card) return;
+  const containerId = card.dataset.container;
+  const index = parseInt(card.dataset.index, 10);
+  const tracks = trackStore[containerId];
+  if (tracks && !isNaN(index)) {
+    playFromList(tracks, index);
+  }
+});
 
 function isCurrentTrack(track) {
   return state.currentTrack && state.currentTrack.id === track.id;
@@ -203,11 +216,11 @@ function playTrack(track) {
   updatePlayingState();
 }
 
-window.playFromList = function(tracks, index) {
+function playFromList(tracks, index) {
   state.playlist = tracks;
   state.playlistIndex = index;
   playTrack(tracks[index]);
-};
+}
 
 function togglePlay() {
   if (!state.currentTrack) return;

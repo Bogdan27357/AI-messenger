@@ -55,7 +55,7 @@ function showPage(name) {
   document.getElementById(`page-${name}`).classList.add('active');
 }
 
-// === Jamendo API ===
+// === Deezer API ===
 async function loadPopularTracks() {
   try {
     const res = await fetch('/api/tracks/popular');
@@ -96,9 +96,11 @@ async function loadByGenre(genre) {
 // === Rendering ===
 function renderTrackGrid(containerId, tracks) {
   const container = document.getElementById(containerId);
+  // Store tracks data globally for onclick
+  window[`trackGridData_${containerId}`] = tracks;
   container.innerHTML = tracks.map((track, i) => `
-    <div class="track-card ${isCurrentTrack(track) ? 'playing' : ''}" data-index="${i}" onclick="playFromList(${JSON.stringify(tracks).split('"').join('&quot;')}, ${i})">
-      <img class="track-card-cover" src="${track.album_image || track.image || ''}" alt="${escapeHtml(track.name)}" loading="lazy">
+    <div class="track-card ${isCurrentTrack(track) ? 'playing' : ''}" data-index="${i}" onclick="playFromList(trackGridData_${containerId}, ${i})">
+      <img class="track-card-cover" src="${track.album_image || ''}" alt="${escapeHtml(track.name)}" loading="lazy">
       <div class="track-card-title">${escapeHtml(track.name)}</div>
       <div class="track-card-artist">${escapeHtml(track.artist_name)}</div>
     </div>
@@ -111,6 +113,8 @@ function renderTrackList(containerId, tracks) {
     container.innerHTML = '<div class="empty-state"><p>Ничего не найдено</p></div>';
     return;
   }
+  // Store tracks data globally for onclick
+  window[`trackListData_${containerId}`] = tracks;
   container.innerHTML = tracks.map((track, i) => `
     <div class="track-row ${isCurrentTrack(track) ? 'playing' : ''}" onclick="playFromList(trackListData_${containerId}, ${i})">
       <div class="track-row-num">
@@ -118,7 +122,7 @@ function renderTrackList(containerId, tracks) {
           '<div class="eq-bars"><span></span><span></span><span></span></div>' :
           (i + 1)}
       </div>
-      <img class="track-row-cover" src="${track.album_image || track.image || ''}" alt="" loading="lazy">
+      <img class="track-row-cover" src="${track.album_image || ''}" alt="" loading="lazy">
       <div class="track-row-info">
         <div class="track-row-title">${escapeHtml(track.name)}</div>
         <div class="track-row-artist">${escapeHtml(track.artist_name)}</div>
@@ -126,9 +130,6 @@ function renderTrackList(containerId, tracks) {
       <div class="track-row-duration">${formatTime(track.duration)}</div>
     </div>
   `).join('');
-
-  // Store tracks data globally for onclick
-  window[`trackListData_${containerId}`] = tracks;
 }
 
 function isCurrentTrack(track) {
@@ -294,7 +295,7 @@ function addToHistory(track) {
     album_image: track.album_image || track.image,
     audio: track.audio,
     duration: track.duration,
-    genre: track.musicinfo?.tags?.genres?.[0] || '',
+    genre: track.genre || '',
     timestamp: Date.now()
   };
 

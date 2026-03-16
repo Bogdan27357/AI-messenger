@@ -1,36 +1,10 @@
-import { PrismaClient } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
 import { config } from '../config';
-
-const prisma = new PrismaClient();
+import { searchDocuments } from './qdrant';
 
 export async function getRelevantDocuments(query: string) {
-  const queryLower = query.toLowerCase();
-  const words = queryLower.split(/\s+/).filter((w) => w.length > 2);
-
-  const docs = await prisma.knowledgeDoc.findMany();
-
-  const scored = docs.map((doc) => {
-    let score = 0;
-    const content = `${doc.title} ${doc.content || ''}`.toLowerCase();
-
-    for (const word of words) {
-      if (content.includes(word)) {
-        score += 1;
-        if (doc.title.toLowerCase().includes(word)) {
-          score += 2;
-        }
-      }
-    }
-    return { ...doc, score };
-  });
-
-  return scored
-    .filter((d) => d.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 5)
-    .map(({ score: _, ...doc }) => doc);
+  return searchDocuments(query, 5);
 }
 
 export async function extractTextFromFile(filePath: string): Promise<string> {

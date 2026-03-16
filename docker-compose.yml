@@ -23,6 +23,17 @@ services:
     volumes:
       - ollama_data:/root/.ollama
 
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: ai-messenger-qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
 volumes:
   postgres_data:
   ollama_data:
+  qdrant_data:

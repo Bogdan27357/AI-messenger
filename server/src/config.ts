@@ -19,5 +19,9 @@ export const config = {
   ollama: {
     url: process.env.OLLAMA_URL || 'http://localhost:11434',
     model: process.env.OLLAMA_MODEL || 'llama3.2',
+    embedModel: process.env.OLLAMA_EMBED_MODEL || 'nomic-embed-text',
+  },
+  qdrant: {
+    url: process.env.QDRANT_URL || 'http://localhost:6333',
   },
 };

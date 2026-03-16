@@ -10,6 +10,7 @@ import chatRoutes from './routes/chats';
 import messageRoutes from './routes/messages';
 import adminRoutes from './routes/admin';
 import aiRoutes from './routes/ai';
+import { ensureCollection } from './services/qdrant';
 
 const app = express();
 const httpServer = createServer(app);
@@ -37,6 +38,12 @@ app.get('/api/health', (_req, res) => {
 // Setup Socket.IO
 setupSocket(httpServer);
 
-httpServer.listen(config.port, () => {
-  console.log(`🚀 Server running on http://localhost:${config.port}`);
+httpServer.listen(config.port, async () => {
+  console.log(`Server running on http://localhost:${config.port}`);
+  try {
+    await ensureCollection();
+    console.log('Qdrant collection ready');
+  } catch (err) {
+    console.warn('Qdrant not available, knowledge search will not work:', (err as Error).message);
+  }
 });

@@ -30,6 +30,9 @@ audio.volume = 0.7;
 
 document.addEventListener('DOMContentLoaded', () => {
   loadPopularTracks();
+  loadGenreSection('electronic', 'electronic-tracks');
+  loadGenreSection('rock', 'rock-tracks');
+  loadGenreSection('jazz', 'jazz-tracks');
   renderHistory();
   setupNavigation();
   setupPlayer();
@@ -77,6 +80,18 @@ async function searchTracks(query) {
     }
   } catch (err) {
     console.error('Search failed:', err);
+  }
+}
+
+async function loadGenreSection(genre, containerId) {
+  try {
+    const res = await fetch(`/api/tracks/bygenre?genre=${encodeURIComponent(genre)}`);
+    const data = await res.json();
+    if (data.results) {
+      renderTrackGrid(containerId, data.results);
+    }
+  } catch (err) {
+    console.error(`Failed to load ${genre}:`, err);
   }
 }
 

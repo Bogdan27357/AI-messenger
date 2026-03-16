@@ -40,7 +40,7 @@ function normalizeTracks(tracks) {
 app.get('/api/search', async (req, res) => {
   try {
     const query = req.query.q || 'popular';
-    const data = await jamendoFetch(`/tracks/?client_id=${JAMENDO_CLIENT_ID}&format=json&limit=25&search=${encodeURIComponent(query)}&include=musicinfo&audioformat=mp32`);
+    const data = await jamendoFetch(`/tracks/?client_id=${JAMENDO_CLIENT_ID}&format=json&limit=50&search=${encodeURIComponent(query)}&include=musicinfo&audioformat=mp32`);
     res.json({ results: normalizeTracks(data.results) });
   } catch (err) {
     console.error('Jamendo search error:', err.message);
@@ -51,7 +51,7 @@ app.get('/api/search', async (req, res) => {
 // Popular tracks
 app.get('/api/tracks/popular', async (req, res) => {
   try {
-    const data = await jamendoFetch(`/tracks/?client_id=${JAMENDO_CLIENT_ID}&format=json&limit=30&order=popularity_total&include=musicinfo&audioformat=mp32`);
+    const data = await jamendoFetch(`/tracks/?client_id=${JAMENDO_CLIENT_ID}&format=json&limit=200&order=popularity_total&include=musicinfo&audioformat=mp32`);
     res.json({ results: normalizeTracks(data.results) });
   } catch (err) {
     console.error('Jamendo popular error:', err.message);
@@ -63,7 +63,7 @@ app.get('/api/tracks/popular', async (req, res) => {
 app.get('/api/tracks/bygenre', async (req, res) => {
   try {
     const genre = req.query.genre || 'pop';
-    const data = await jamendoFetch(`/tracks/?client_id=${JAMENDO_CLIENT_ID}&format=json&limit=25&tags=${encodeURIComponent(genre)}&include=musicinfo&audioformat=mp32&order=popularity_total`);
+    const data = await jamendoFetch(`/tracks/?client_id=${JAMENDO_CLIENT_ID}&format=json&limit=50&tags=${encodeURIComponent(genre)}&include=musicinfo&audioformat=mp32&order=popularity_total`);
     res.json({ results: normalizeTracks(data.results) });
   } catch (err) {
     console.error('Jamendo genre error:', err.message);

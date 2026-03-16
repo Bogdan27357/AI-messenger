@@ -633,6 +633,32 @@ body {
   cursor: pointer;
 }
 
+/* Load More Button */
+.btn-load-more {
+  display: block;
+  margin: 24px auto 0;
+  padding: 12px 36px;
+  background: transparent;
+  border: 1px solid var(--accent);
+  border-radius: 50px;
+  color: var(--accent-light);
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-load-more:hover {
+  background: rgba(124, 58, 237, 0.15);
+  box-shadow: 0 4px 15px var(--accent-glow);
+}
+
+.btn-load-more:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Empty state */
 .empty-state {
   display: flex;

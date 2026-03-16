@@ -7,6 +7,9 @@ const state = {
   listeningHistory: JSON.parse(localStorage.getItem('listeningHistory') || '[]')
 };
 
+// Pagination state for "Load more"
+const pagination = {};
+
 // === DOM Elements ===
 const audio = document.getElementById('audio-player');
 const playerBar = document.getElementById('player-bar');
@@ -58,13 +61,15 @@ function showPage(name) {
   document.getElementById(`page-${name}`).classList.add('active');
 }
 
-// === Deezer API ===
+// === Jamendo API ===
 async function loadPopularTracks() {
   try {
     const res = await fetch('/api/tracks/popular');
     const data = await res.json();
     if (data.results) {
       renderTrackGrid('popular-tracks', data.results);
+      pagination['popular'] = { url: '/api/tracks/popular', offset: data.results.length, hasMore: data.hasMore, containerId: 'popular-tracks', mode: 'grid' };
+      if (data.hasMore) addLoadMoreBtn('popular-tracks', 'popular');
     }
   } catch (err) {
     console.error('Failed to load popular tracks:', err);
@@ -77,6 +82,8 @@ async function searchTracks(query) {
     const data = await res.json();
     if (data.results) {
       renderTrackList('search-results', data.results);
+      pagination['search'] = { url: `/api/search?q=${encodeURIComponent(query)}`, offset: data.results.length, hasMore: data.hasMore, containerId: 'search-results', mode: 'list' };
+      if (data.hasMore) addLoadMoreBtn('search-results', 'search');
     }
   } catch (err) {
     console.error('Search failed:', err);
@@ -89,6 +96,9 @@ async function loadGenreSection(genre, containerId) {
     const data = await res.json();
     if (data.results) {
       renderTrackGrid(containerId, data.results);
+      const key = `genre_${containerId}`;
+      pagination[key] = { url: `/api/tracks/bygenre?genre=${encodeURIComponent(genre)}`, offset: data.results.length, hasMore: data.hasMore, containerId, mode: 'grid' };
+      if (data.hasMore) addLoadMoreBtn(containerId, key);
     }
   } catch (err) {
     console.error(`Failed to load ${genre}:`, err);
@@ -102,9 +112,81 @@ async function loadByGenre(genre) {
     if (data.results) {
       showPage('search');
       renderTrackList('search-results', data.results);
+      pagination['search'] = { url: `/api/tracks/bygenre?genre=${encodeURIComponent(genre)}`, offset: data.results.length, hasMore: data.hasMore, containerId: 'search-results', mode: 'list' };
+      if (data.hasMore) addLoadMoreBtn('search-results', 'search');
     }
   } catch (err) {
     console.error('Genre load failed:', err);
+  }
+}
+
+// === Load More ===
+function addLoadMoreBtn(containerId, paginationKey) {
+  const container = document.getElementById(containerId);
+  const existing = container.parentElement.querySelector('.btn-load-more');
+  if (existing) existing.remove();
+
+  const btn = document.createElement('button');
+  btn.className = 'btn-load-more';
+  btn.textContent = 'Загрузить ещё';
+  btn.dataset.paginationKey = paginationKey;
+  container.parentElement.appendChild(btn);
+}
+
+document.addEventListener('click', (e) => {
+  if (!e.target.classList.contains('btn-load-more')) return;
+  const key = e.target.dataset.paginationKey;
+  const p = pagination[key];
+  if (!p) return;
+  loadMore(key, e.target);
+});
+
+async function loadMore(key, btn) {
+  const p = pagination[key];
+  if (!p || !p.hasMore) return;
+
+  btn.disabled = true;
+  btn.textContent = 'Загрузка...';
+
+  try {
+    const separator = p.url.includes('?') ? '&' : '?';
+    const res = await fetch(`${p.url}${separator}offset=${p.offset}`);
+    const data = await res.json();
+
+    if (data.results && data.results.length > 0) {
+      // Append new tracks to existing store
+      const existing = trackStore[p.containerId] || [];
+      const newTracks = [...existing, ...data.results];
+      trackStore[p.containerId] = newTracks;
+
+      // Re-render
+      if (p.mode === 'grid') {
+        appendTrackGrid(p.containerId, data.results, existing.length);
+      } else {
+        appendTrackList(p.containerId, data.results, existing.length);
+      }
+
+      // Update playlist if currently playing from this container
+      if (state.playlist === existing) {
+        state.playlist = newTracks;
+      }
+
+      p.offset += data.results.length;
+      p.hasMore = data.hasMore;
+
+      if (data.hasMore) {
+        btn.disabled = false;
+        btn.textContent = 'Загрузить ещё';
+      } else {
+        btn.remove();
+      }
+    } else {
+      btn.remove();
+    }
+  } catch (err) {
+    console.error('Load more error:', err);
+    btn.disabled = false;
+    btn.textContent = 'Загрузить ещё';
   }
 }
 
@@ -122,6 +204,18 @@ function renderTrackGrid(containerId, tracks) {
       <div class="track-card-artist">${escapeHtml(track.artist_name)}</div>
     </div>
   `).join('');
+}
+
+function appendTrackGrid(containerId, newTracks, startIndex) {
+  const container = document.getElementById(containerId);
+  const html = newTracks.map((track, i) => `
+    <div class="track-card ${isCurrentTrack(track) ? 'playing' : ''}" data-container="${containerId}" data-index="${startIndex + i}">
+      <img class="track-card-cover" src="${track.album_image || ''}" alt="${escapeHtml(track.name)}" loading="lazy">
+      <div class="track-card-title">${escapeHtml(track.name)}</div>
+      <div class="track-card-artist">${escapeHtml(track.artist_name)}</div>
+    </div>
+  `).join('');
+  container.insertAdjacentHTML('beforeend', html);
 }
 
 function renderTrackList(containerId, tracks) {
@@ -146,6 +240,22 @@ function renderTrackList(containerId, tracks) {
       <div class="track-row-duration">${formatTime(track.duration)}</div>
     </div>
   `).join('');
+}
+
+function appendTrackList(containerId, newTracks, startIndex) {
+  const container = document.getElementById(containerId);
+  const html = newTracks.map((track, i) => `
+    <div class="track-row ${isCurrentTrack(track) ? 'playing' : ''}" data-container="${containerId}" data-index="${startIndex + i}">
+      <div class="track-row-num">${startIndex + i + 1}</div>
+      <img class="track-row-cover" src="${track.album_image || ''}" alt="" loading="lazy">
+      <div class="track-row-info">
+        <div class="track-row-title">${escapeHtml(track.name)}</div>
+        <div class="track-row-artist">${escapeHtml(track.artist_name)}</div>
+      </div>
+      <div class="track-row-duration">${formatTime(track.duration)}</div>
+    </div>
+  `).join('');
+  container.insertAdjacentHTML('beforeend', html);
 }
 
 // Event delegation for track clicks

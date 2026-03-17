@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api, uploadFile } from '../utils/api';
-import { getInitials, formatDate } from '../utils/format';
+import { formatDate } from '../utils/format';
+import UserAvatar from '../components/UserAvatar';
 
 export default function AdminPage() {
   const { user, token } = useAuth();
@@ -11,7 +12,6 @@ export default function AdminPage() {
   const [trainings, setTrainings] = useState([]);
   const [documents, setDocuments] = useState([]);
 
-  // Forms
   const [showCreateUser, setShowCreateUser] = useState(false);
   const [showCreateTest, setShowCreateTest] = useState(false);
   const [showCreateTraining, setShowCreateTraining] = useState(false);
@@ -78,7 +78,6 @@ export default function AdminPage() {
     loadData();
   };
 
-  // Test creation
   const addQuestion = () => {
     setTestForm({
       ...testForm,
@@ -177,7 +176,6 @@ export default function AdminPage() {
         <button className={tab === 'trainings' ? 'active' : ''} onClick={() => setTab('trainings')}>Обучения</button>
       </div>
 
-      {/* ===== USERS TAB ===== */}
       {tab === 'users' && (
         <div className="admin-section">
           <div className="admin-section-header">
@@ -187,14 +185,14 @@ export default function AdminPage() {
           <div className="admin-table">
             {users.map(u => (
               <div key={u.id} className="admin-user-row">
-                <div className="avatar small">{getInitials(u.full_name)}</div>
+                <UserAvatar user={u} size={40} />
                 <div className="admin-user-info">
                   <div className="admin-user-name">{u.full_name}</div>
                   <div className="admin-user-details">@{u.username} · {u.position} · {u.role === 'admin' ? 'Админ' : 'Сотрудник'}</div>
                 </div>
                 <span className={`status-dot ${u.status}`} />
                 {u.id !== user.id && (
-                  <button className="icon-btn small" onClick={() => deleteUser(u.id)}>🗑</button>
+                  <button className="icon-btn small" onClick={() => deleteUser(u.id)}>{'\u{1F5D1}'}</button>
                 )}
               </div>
             ))}
@@ -222,7 +220,6 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* ===== MENTORS TAB ===== */}
       {tab === 'mentors' && (
         <div className="admin-section">
           <div className="admin-section-header">
@@ -235,9 +232,9 @@ export default function AdminPage() {
               return (
                 <div key={u.id} className="mentor-row">
                   <div className="mentor-pair">
-                    <span className="mentor-employee">{u.full_name}</span>
-                    <span className="mentor-arrow">→</span>
-                    <span className="mentor-name">{mentor?.full_name || 'Не найден'}</span>
+                    <span>{u.full_name}</span>
+                    <span className="mentor-arrow">{'\u2192'}</span>
+                    <span>{mentor?.full_name || 'Не найден'}</span>
                   </div>
                 </div>
               );
@@ -269,7 +266,6 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* ===== DOCUMENTS TAB ===== */}
       {tab === 'documents' && (
         <div className="admin-section">
           <div className="admin-section-header">
@@ -279,13 +275,13 @@ export default function AdminPage() {
           <div className="admin-table">
             {documents.map(d => (
               <div key={d.id} className="doc-row">
-                <span className="doc-icon">📄</span>
+                <span className="doc-icon">{'\u{1F4C4}'}</span>
                 <div className="doc-info">
                   <div className="doc-title">{d.title}</div>
                   <div className="doc-meta">{d.file_name} · Загрузил: {d.uploader_name} · {formatDate(d.created_at)}</div>
                 </div>
                 <a href={d.file_url} download className="btn secondary small">Скачать</a>
-                <button className="btn ai small" onClick={() => indexDocument(d.id)} title="Индексировать для ИИ-поиска">🤖</button>
+                <button className="btn ai small" onClick={() => indexDocument(d.id)} title="Индексировать для ИИ-поиска">{'\u{1F916}'}</button>
               </div>
             ))}
             {documents.length === 0 && <p className="empty-text">Нет загруженных документов</p>}
@@ -304,12 +300,10 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* ===== TESTS TAB ===== */}
       {tab === 'tests' && (
         <div className="admin-section">
-          {/* AI Test Generation */}
           <div className="ai-generate-section">
-            <h4>🤖 Генерация теста с помощью ИИ (Ollama)</h4>
+            <h4>{'\u{1F916}'} Генерация теста с помощью ИИ (Ollama)</h4>
             {aiStatus && (
               <div className="ai-status">
                 <span className={`ai-status-dot ${aiStatus.ollama?.status}`} />
@@ -325,10 +319,10 @@ export default function AdminPage() {
               </select>
               <input placeholder="Название теста (опционально)" value={genTitle} onChange={e => setGenTitle(e.target.value)} />
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <label style={{ fontSize: 13 }}>Кол-во вопросов:</label>
+                <label style={{ fontSize: 13, whiteSpace: 'nowrap' }}>Кол-во вопросов:</label>
                 <input type="number" min="1" max="20" value={genCount} onChange={e => setGenCount(parseInt(e.target.value) || 5)} style={{ width: 80 }} />
                 <button className="btn ai" onClick={generateTestAI} disabled={generating}>
-                  {generating ? 'Генерация...' : '🤖 Сгенерировать тест'}
+                  {generating ? 'Генерация...' : '\u{1F916} Сгенерировать тест'}
                 </button>
               </div>
             </div>
@@ -364,7 +358,7 @@ export default function AdminPage() {
                   <div key={qi} className="question-form">
                     <div className="question-header">
                       <span>Вопрос {qi + 1}</span>
-                      <button className="icon-btn small" onClick={() => removeQuestion(qi)}>✕</button>
+                      <button className="icon-btn small" onClick={() => removeQuestion(qi)}>{'\u2715'}</button>
                     </div>
                     <input placeholder="Текст вопроса" value={q.question} onChange={e => updateQuestion(qi, 'question', e.target.value)} />
                     {q.options.map((opt, oi) => (
@@ -418,7 +412,6 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* ===== TRAININGS TAB ===== */}
       {tab === 'trainings' && (
         <div className="admin-section">
           <div className="admin-section-header">
@@ -431,7 +424,7 @@ export default function AdminPage() {
                 <div className="training-info">
                   <div className="training-title">{t.title}</div>
                   <div className="training-meta">
-                    {t.start_date && `📅 ${formatDate(t.start_date)}`} {t.location && `📍 ${t.location}`} · Назначено: {t.assigned_count}
+                    {t.start_date && `\u{1F4C5} ${formatDate(t.start_date)}`} {t.location && `\u{1F4CD} ${t.location}`} · Назначено: {t.assigned_count}
                   </div>
                 </div>
                 <button className="btn primary small" onClick={() => { setShowAssignTraining(t.id); setAssignUserIds([]); }}>Назначить</button>

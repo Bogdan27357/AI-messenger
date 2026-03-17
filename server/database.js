@@ -97,17 +97,17 @@ class StatementCompat {
     this._sql = sql;
   }
 
-  _bindParams(params) {
-    // sql.js expects positional params as an array
-    if (params === undefined || params === null) return [];
-    if (Array.isArray(params)) return params;
-    return [params];
+  _normalizeParams(params) {
+    // sql.js does not handle undefined — convert to null for COALESCE compatibility
+    return params.map(p => p === undefined ? null : p);
   }
 
   run(...params) {
     const db = this._wrapper._db;
     const flatParams = params.flat !== undefined ? params : [params];
-    const bindable = flatParams.length === 1 && Array.isArray(flatParams[0]) ? flatParams[0] : flatParams;
+    const bindable = this._normalizeParams(
+      flatParams.length === 1 && Array.isArray(flatParams[0]) ? flatParams[0] : flatParams
+    );
 
     db.run(this._sql, bindable);
 
@@ -122,7 +122,9 @@ class StatementCompat {
   get(...params) {
     const db = this._wrapper._db;
     const flatParams = params.flat !== undefined ? params : [params];
-    const bindable = flatParams.length === 1 && Array.isArray(flatParams[0]) ? flatParams[0] : flatParams;
+    const bindable = this._normalizeParams(
+      flatParams.length === 1 && Array.isArray(flatParams[0]) ? flatParams[0] : flatParams
+    );
 
     let stmt;
     try {
@@ -146,7 +148,9 @@ class StatementCompat {
   all(...params) {
     const db = this._wrapper._db;
     const flatParams = params.flat !== undefined ? params : [params];
-    const bindable = flatParams.length === 1 && Array.isArray(flatParams[0]) ? flatParams[0] : flatParams;
+    const bindable = this._normalizeParams(
+      flatParams.length === 1 && Array.isArray(flatParams[0]) ? flatParams[0] : flatParams
+    );
 
     let stmt;
     try {

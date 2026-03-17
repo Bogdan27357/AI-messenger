@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api, uploadFile } from '../utils/api';
-import { formatTime, getInitials } from '../utils/format';
+import { formatTime } from '../utils/format';
+import UserAvatar from '../components/UserAvatar';
 
 export default function BlogPage() {
   const { user, token } = useAuth();
@@ -82,10 +83,9 @@ export default function BlogPage() {
   return (
     <div className="blog-page">
       <div className="blog-container">
-        {/* New post form */}
         <div className="blog-new-post">
           <div className="blog-new-post-header">
-            <div className="avatar small">{getInitials(user.full_name)}</div>
+            <UserAvatar user={user} size={40} />
             <textarea
               placeholder="Что нового?"
               value={newPostText}
@@ -99,16 +99,16 @@ export default function BlogPage() {
                 <img src={mediaPreview.url} alt="preview" /> :
                 <video src={mediaPreview.url} controls />
               }
-              <button className="remove-media" onClick={() => { setMediaFile(null); setMediaPreview(null); }}>✕</button>
+              <button className="remove-media" onClick={() => { setMediaFile(null); setMediaPreview(null); }}>{'\u2715'}</button>
             </div>
           )}
           <div className="blog-new-post-actions">
             <label className="icon-btn">
-              🖼️ Фото
+              {'\u{1F5BC}\uFE0F'} Фото
               <input type="file" accept="image/*" onChange={handleMediaSelect} hidden />
             </label>
             <label className="icon-btn">
-              🎬 Видео
+              {'\u{1F3AC}'} Видео
               <input type="file" accept="video/*" onChange={handleMediaSelect} hidden />
             </label>
             <button className="btn primary" onClick={createPost} disabled={posting}>
@@ -117,18 +117,17 @@ export default function BlogPage() {
           </div>
         </div>
 
-        {/* Posts feed */}
         {posts.map(post => (
           <div key={post.id} className="blog-post">
             <div className="blog-post-header">
-              <div className="avatar small">{getInitials(post.author_name)}</div>
+              <UserAvatar user={{ id: post.author_id, full_name: post.author_name, avatar: post.author_avatar }} size={42} />
               <div className="blog-post-author">
                 <div className="blog-post-author-name">{post.author_name}</div>
                 <div className="blog-post-author-pos">{post.author_position}</div>
               </div>
               <span className="blog-post-time">{formatTime(post.created_at)}</span>
               {(post.author_id === user.id || user.role === 'admin') && (
-                <button className="icon-btn small" onClick={() => deletePost(post.id)}>🗑</button>
+                <button className="icon-btn small" onClick={() => deletePost(post.id)}>{'\u{1F5D1}'}</button>
               )}
             </div>
 
@@ -143,10 +142,10 @@ export default function BlogPage() {
 
             <div className="blog-post-stats">
               <button className={`like-btn ${post.is_liked ? 'liked' : ''}`} onClick={() => toggleLike(post.id)}>
-                {post.is_liked ? '❤️' : '🤍'} {post.likes_count || 0}
+                {post.is_liked ? '\u2764\uFE0F' : '\u{1F90D}'} {post.likes_count || 0}
               </button>
               <button className="comment-btn" onClick={() => toggleComments(post.id)}>
-                💬 {post.comments_count || 0}
+                {'\u{1F4AC}'} {post.comments_count || 0}
               </button>
             </div>
 
@@ -154,7 +153,7 @@ export default function BlogPage() {
               <div className="blog-comments">
                 {(comments[post.id] || []).map(c => (
                   <div key={c.id} className="blog-comment">
-                    <div className="avatar tiny">{getInitials(c.author_name)}</div>
+                    <UserAvatar user={{ id: c.author_id, full_name: c.author_name }} size={28} />
                     <div className="blog-comment-content">
                       <span className="blog-comment-author">{c.author_name}</span>
                       <span className="blog-comment-text">{c.text}</span>
@@ -170,7 +169,9 @@ export default function BlogPage() {
                     onChange={e => setCommentTexts({ ...commentTexts, [post.id]: e.target.value })}
                     onKeyDown={e => e.key === 'Enter' && addComment(post.id)}
                   />
-                  <button className="send-btn" onClick={() => addComment(post.id)}>➤</button>
+                  <button className="send-btn" onClick={() => addComment(post.id)}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                  </button>
                 </div>
               </div>
             )}

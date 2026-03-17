@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api, uploadFile } from '../utils/api';
-import { getInitials, formatDate } from '../utils/format';
+import { formatDate } from '../utils/format';
+import UserAvatar from '../components/UserAvatar';
 
 export default function ProfilePage() {
   const { userId } = useParams();
@@ -40,10 +41,14 @@ export default function ProfilePage() {
   const handleAvatarChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const uploaded = await uploadFile(file, token);
-    const updated = await api.put('/users/profile', { avatar: uploaded.url }, token);
-    setProfile({ ...profile, ...updated });
-    updateUser(updated);
+    try {
+      const uploaded = await uploadFile(file, token);
+      const updated = await api.put('/users/profile', { avatar: uploaded.url }, token);
+      setProfile({ ...profile, ...updated });
+      updateUser(updated);
+    } catch (err) {
+      alert('Ошибка загрузки аватара');
+    }
   };
 
   if (!profile) return <div className="loading-text">Загрузка...</div>;
@@ -55,11 +60,14 @@ export default function ProfilePage() {
           {profile.avatar ? (
             <img src={profile.avatar} alt="" className="profile-avatar" />
           ) : (
-            <div className="avatar large">{getInitials(profile.full_name)}</div>
+            <UserAvatar user={profile} size={90} />
           )}
           {isOwn && (
             <label className="avatar-upload-btn">
-              📷
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                <path d="M20 4h-3.17L15 2H9L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-8 13c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z" />
+              </svg>
               <input type="file" accept="image/*" onChange={handleAvatarChange} hidden />
             </label>
           )}
@@ -85,7 +93,7 @@ export default function ProfilePage() {
                 <p className="profile-mentor">Наставник: {profile.mentor.full_name}</p>
               )}
               <p className="profile-joined">В системе с {formatDate(profile.created_at)}</p>
-              {isOwn && <button className="btn secondary" onClick={() => setEditing(true)}>Редактировать</button>}
+              {isOwn && <button className="btn secondary" onClick={() => setEditing(true)} style={{ marginTop: 12 }}>Редактировать</button>}
             </>
           )}
         </div>
@@ -107,8 +115,8 @@ export default function ProfilePage() {
                 {post.media_url && post.media_type === 'image' && <img src={post.media_url} className="blog-post-media" alt="" />}
                 {post.media_url && post.media_type === 'video' && <video src={post.media_url} controls className="blog-post-media" />}
                 <div className="blog-post-stats">
-                  <span>❤️ {post.likes_count}</span>
-                  <span>💬 {post.comments_count}</span>
+                  <span>{'\u2764\uFE0F'} {post.likes_count}</span>
+                  <span>{'\u{1F4AC}'} {post.comments_count}</span>
                 </div>
               </div>
             ))}
@@ -128,7 +136,7 @@ export default function ProfilePage() {
                   </span>
                 </div>
                 {t.status !== 'completed' && (
-                  <a href={`/tests/${t.test_id}`} className="btn primary small">Пройти тест</a>
+                  <a href={`/tests/${t.test_id}`} className="btn primary small" style={{ marginTop: 10 }}>Пройти тест</a>
                 )}
               </div>
             ))}
@@ -142,8 +150,8 @@ export default function ProfilePage() {
                 <h4>{t.title}</h4>
                 <p>{t.description}</p>
                 <div className="training-card-info">
-                  {t.start_date && <span>📅 {formatDate(t.start_date)}</span>}
-                  {t.location && <span>📍 {t.location}</span>}
+                  {t.start_date && <span>{'\u{1F4C5}'} {formatDate(t.start_date)}</span>}
+                  {t.location && <span>{'\u{1F4CD}'} {t.location}</span>}
                   <span className={`training-status ${t.status}`}>
                     {t.status === 'completed' ? 'Пройдено' : 'Назначено'}
                   </span>

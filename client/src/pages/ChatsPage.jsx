@@ -3,6 +3,19 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api, uploadFile } from '../utils/api';
 import { formatTime, getInitials } from '../utils/format';
+import UserAvatar, { GroupAvatar } from '../components/UserAvatar';
+
+function getDateLabel(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + (dateStr.includes('Z') ? '' : 'Z'));
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const msgDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diff = (today - msgDate) / 86400000;
+  if (diff === 0) return 'Сегодня';
+  if (diff === 1) return 'Вчера';
+  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined });
+}
 
 export default function ChatsPage() {
   const { chatId } = useParams();
@@ -125,15 +138,87 @@ export default function ChatsPage() {
   const isImage = (type) => type && type.startsWith('image/');
   const isVideo = (type) => type && type.startsWith('video/');
 
+  const getChatAvatar = (chat, size = 50) => {
+    if (chat.type === 'group') {
+      return <GroupAvatar size={size} name={chat.name} />;
+    }
+    const otherUser = chat.members?.find(m => m.id !== user.id);
+    if (otherUser) {
+      return <UserAvatar user={otherUser} size={size} />;
+    }
+    return <UserAvatar user={{ id: chat.id, full_name: chat.name }} size={size} />;
+  };
+
+  // Group messages by date
+  const renderMessages = () => {
+    const elements = [];
+    let lastDate = '';
+    messages.forEach((msg, i) => {
+      const msgDate = getDateLabel(msg.created_at);
+      if (msgDate !== lastDate) {
+        lastDate = msgDate;
+        elements.push(
+          <div key={`date-${i}`} className="date-separator">
+            <span>{msgDate}</span>
+          </div>
+        );
+      }
+
+      const senderUser = users.find(u => u.id === msg.sender_id);
+      const senderColor = getSenderColor(msg.sender_id);
+
+      elements.push(
+        <div key={msg.id} className={`message ${msg.sender_id === user.id ? 'own' : ''}`}>
+          {msg.sender_id !== user.id && currentChat?.type === 'group' && (
+            <div className="message-sender" style={{ color: senderColor }}>{msg.sender_name}</div>
+          )}
+          {msg.reply_to && (
+            <div className="message-reply">
+              <span className="reply-author">{msg.reply_sender_name}</span>
+              <span className="reply-text">{msg.reply_text}</span>
+            </div>
+          )}
+          {msg.file_url && isImage(msg.file_type) && (
+            <img src={msg.file_url} alt={msg.file_name} className="message-image" />
+          )}
+          {msg.file_url && isVideo(msg.file_type) && (
+            <video src={msg.file_url} controls className="message-video" />
+          )}
+          {msg.file_url && !isImage(msg.file_type) && !isVideo(msg.file_type) && (
+            <a href={msg.file_url} download={msg.file_name} className="message-file">
+              <span className="message-file-icon">{'\u{1F4CE}'}</span>
+              <span className="message-file-name">{msg.file_name}</span>
+            </a>
+          )}
+          {msg.text && <div className="message-text">{msg.text}</div>}
+          <div className="message-meta">
+            <span className="message-time">{formatTime(msg.created_at)}</span>
+            {msg.sender_id === user.id && (
+              <span className={`message-status ${msg.is_read ? 'read' : ''}`}>
+                {msg.is_read ? '\u2713\u2713' : '\u2713'}
+              </span>
+            )}
+          </div>
+          <div className="message-actions">
+            <button onClick={() => setReplyTo(msg)} title="Ответить">{'\u21A9'}</button>
+            {(msg.sender_id === user.id || user.role === 'admin') && (
+              <button onClick={() => deleteMessage(msg.id)} title="Удалить">{'\u{1F5D1}'}</button>
+            )}
+          </div>
+        </div>
+      );
+    });
+    return elements;
+  };
+
   return (
     <div className="chats-page">
-      {/* Chat list sidebar */}
       <div className={`chat-list-panel ${chatId ? 'mobile-hidden' : ''}`}>
         <div className="chat-list-header">
           <h2>Чаты</h2>
           <div className="chat-list-actions">
-            <button className="icon-btn" onClick={() => setShowNewChat(true)} title="Новый чат">✏️</button>
-            <button className="icon-btn" onClick={() => setShowNewGroup(true)} title="Новая группа">👥</button>
+            <button className="icon-btn" onClick={() => setShowNewChat(true)} title="Новый чат">{'\u270F\uFE0F'}</button>
+            <button className="icon-btn" onClick={() => setShowNewGroup(true)} title="Новая группа">{'\u{1F465}'}</button>
           </div>
         </div>
         <div className="search-box">
@@ -151,9 +236,7 @@ export default function ChatsPage() {
               className={`chat-item ${parseInt(chatId) === chat.id ? 'active' : ''}`}
               onClick={() => navigate(`/chats/${chat.id}`)}
             >
-              <div className="avatar">
-                {chat.type === 'group' ? '👥' : getInitials(chat.name)}
-              </div>
+              {getChatAvatar(chat, 50)}
               <div className="chat-item-info">
                 <div className="chat-item-top">
                   <span className="chat-item-name">{chat.name || 'Чат'}</span>
@@ -169,18 +252,18 @@ export default function ChatsPage() {
         </div>
       </div>
 
-      {/* Chat messages area */}
       <div className={`chat-area ${!chatId ? 'mobile-hidden' : ''}`}>
         {chatId && currentChat ? (
           <>
             <div className="chat-header">
-              <button className="back-btn mobile-only" onClick={() => navigate('/chats')}>←</button>
-              <div className="avatar">{currentChat.type === 'group' ? '👥' : getInitials(currentChat.name)}</div>
+              <button className="back-btn mobile-only" onClick={() => navigate('/chats')}>{'\u2190'}</button>
+              {getChatAvatar(currentChat, 42)}
               <div className="chat-header-info">
                 <div className="chat-header-name">{currentChat.name}</div>
                 <div className="chat-header-status">
-                  {Object.keys(typing).length > 0 ? 'печатает...' :
-                    currentChat.type === 'group' ?
+                  {Object.keys(typing).length > 0 ? (
+                    <span className="typing-indicator">печатает...</span>
+                  ) : currentChat.type === 'group' ?
                     `${currentChat.members?.length || 0} участников` :
                     currentChat.members?.find(m => m.id !== user.id)?.status === 'online' ? 'в сети' : 'не в сети'
                   }
@@ -189,43 +272,7 @@ export default function ChatsPage() {
             </div>
 
             <div className="messages-area">
-              {messages.map(msg => (
-                <div key={msg.id} className={`message ${msg.sender_id === user.id ? 'own' : ''}`}>
-                  {msg.sender_id !== user.id && currentChat.type === 'group' && (
-                    <div className="message-sender">{msg.sender_name}</div>
-                  )}
-                  {msg.reply_to && (
-                    <div className="message-reply">
-                      <span className="reply-author">{msg.reply_sender_name}</span>
-                      <span className="reply-text">{msg.reply_text}</span>
-                    </div>
-                  )}
-                  {msg.file_url && isImage(msg.file_type) && (
-                    <img src={msg.file_url} alt={msg.file_name} className="message-image" />
-                  )}
-                  {msg.file_url && isVideo(msg.file_type) && (
-                    <video src={msg.file_url} controls className="message-video" />
-                  )}
-                  {msg.file_url && !isImage(msg.file_type) && !isVideo(msg.file_type) && (
-                    <a href={msg.file_url} download={msg.file_name} className="message-file">
-                      📎 {msg.file_name}
-                    </a>
-                  )}
-                  {msg.text && <div className="message-text">{msg.text}</div>}
-                  <div className="message-meta">
-                    <span className="message-time">{formatTime(msg.created_at)}</span>
-                    {msg.sender_id === user.id && (
-                      <span className="message-status">{msg.is_read ? '✓✓' : '✓'}</span>
-                    )}
-                  </div>
-                  <div className="message-actions">
-                    <button onClick={() => setReplyTo(msg)} title="Ответить">↩</button>
-                    {(msg.sender_id === user.id || user.role === 'admin') && (
-                      <button onClick={() => deleteMessage(msg.id)} title="Удалить">🗑</button>
-                    )}
-                  </div>
-                </div>
-              ))}
+              {renderMessages()}
               <div ref={messagesEndRef} />
             </div>
 
@@ -233,11 +280,11 @@ export default function ChatsPage() {
               {replyTo && (
                 <div className="reply-preview">
                   <span>Ответ для {replyTo.sender_name}: {replyTo.text?.slice(0, 50)}</span>
-                  <button onClick={() => setReplyTo(null)}>✕</button>
+                  <button onClick={() => setReplyTo(null)}>{'\u2715'}</button>
                 </div>
               )}
               <div className="message-input-row">
-                <button className="icon-btn" onClick={() => fileInputRef.current?.click()}>📎</button>
+                <button className="icon-btn" onClick={() => fileInputRef.current?.click()}>{'\u{1F4CE}'}</button>
                 <input type="file" ref={fileInputRef} onChange={handleFileUpload} hidden />
                 <input
                   type="text"
@@ -246,19 +293,22 @@ export default function ChatsPage() {
                   onChange={e => setMessageText(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && sendMessage()}
                 />
-                <button className="send-btn" onClick={sendMessage}>➤</button>
+                <button className="send-btn" onClick={sendMessage}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                  </svg>
+                </button>
               </div>
             </div>
           </>
         ) : (
           <div className="no-chat-selected">
-            <img src="/logo.png" alt="ПРМ" style={{ width: 120, opacity: 0.5 }} />
+            <img src="/logo.png" alt="ПРМ" style={{ width: 100, opacity: 0.3 }} />
             <p>Выберите чат для начала общения</p>
           </div>
         )}
       </div>
 
-      {/* New chat modal */}
       {showNewChat && (
         <div className="modal-overlay" onClick={() => setShowNewChat(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
@@ -266,7 +316,7 @@ export default function ChatsPage() {
             <div className="user-list">
               {users.filter(u => u.id !== user.id).map(u => (
                 <div key={u.id} className="user-list-item" onClick={() => createPrivateChat(u.id)}>
-                  <div className="avatar small">{getInitials(u.full_name)}</div>
+                  <UserAvatar user={u} size={40} />
                   <div>
                     <div className="user-list-name">{u.full_name}</div>
                     <div className="user-list-pos">{u.position}</div>
@@ -280,7 +330,6 @@ export default function ChatsPage() {
         </div>
       )}
 
-      {/* New group modal */}
       {showNewGroup && (
         <div className="modal-overlay" onClick={() => setShowNewGroup(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
@@ -303,7 +352,7 @@ export default function ChatsPage() {
                       else setSelectedUsers(selectedUsers.filter(id => id !== u.id));
                     }}
                   />
-                  <div className="avatar small">{getInitials(u.full_name)}</div>
+                  <UserAvatar user={u} size={36} />
                   <span>{u.full_name}</span>
                 </label>
               ))}
@@ -317,4 +366,13 @@ export default function ChatsPage() {
       )}
     </div>
   );
+}
+
+const SENDER_COLORS = [
+  '#e17076', '#eda86c', '#a695e7', '#7bc862',
+  '#6ec9cb', '#65aadd', '#ee7aae', '#e0a060',
+];
+
+function getSenderColor(id) {
+  return SENDER_COLORS[(id || 0) % SENDER_COLORS.length];
 }

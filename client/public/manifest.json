@@ -1,0 +1,20 @@
+{
+  "name": "ПРМ Мессенджер",
+  "short_name": "ПРМ",
+  "description": "Корпоративный мессенджер — Аэропорт Пулково",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0e1621",
+  "theme_color": "#5288c1",
+  "orientation": "any",
+  "categories": ["social", "communication"],
+  "lang": "ru",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

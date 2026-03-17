@@ -3,13 +3,12 @@ const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
 
-const DB_PATH = path.join(__dirname, 'data', 'prm.db');
-
-// Ensure data directory exists
-const dataDir = path.join(__dirname, 'data');
+// Support custom data path for packaged Electron builds
+const dataDir = process.env.PRM_DATA_PATH || path.join(__dirname, 'data');
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
+const DB_PATH = path.join(dataDir, 'prm.db');
 
 // ---------------------------------------------------------------------------
 // Compatibility wrapper: makes sql.js look like better-sqlite3

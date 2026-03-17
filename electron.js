@@ -1,5 +1,6 @@
 const { app, BrowserWindow, Menu, Tray, shell, nativeImage } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const { fork } = require('child_process');
 
 let mainWindow;
@@ -9,10 +10,34 @@ let serverProcess;
 const PORT = 3001;
 const SERVER_URL = `http://localhost:${PORT}`;
 
+// For packaged app, use userData for writable data
+function getDataPath() {
+  if (app.isPackaged) {
+    const userDataPath = path.join(app.getPath('userData'), 'prm-data');
+    if (!fs.existsSync(userDataPath)) fs.mkdirSync(userDataPath, { recursive: true });
+    // Copy initial database if not exists
+    const dbDest = path.join(userDataPath, 'prm.db');
+    if (!fs.existsSync(dbDest)) {
+      const dbSrc = path.join(process.resourcesPath, 'data', 'prm.db');
+      if (fs.existsSync(dbSrc)) fs.copyFileSync(dbSrc, dbDest);
+    }
+    // Ensure uploads dir
+    const uploadsDir = path.join(userDataPath, 'uploads');
+    if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+    return userDataPath;
+  }
+  return null;
+}
+
 function startServer() {
   return new Promise((resolve, reject) => {
-    // Set production mode so Express serves the built frontend
-    const env = { ...process.env, NODE_ENV: 'production', PORT: String(PORT) };
+    const dataPath = getDataPath();
+    const env = {
+      ...process.env,
+      NODE_ENV: 'production',
+      PORT: String(PORT),
+      ...(dataPath ? { PRM_DATA_PATH: dataPath } : {})
+    };
 
     serverProcess = fork(path.join(__dirname, 'server', 'index.js'), [], {
       env,

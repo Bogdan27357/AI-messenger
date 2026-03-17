@@ -5,8 +5,12 @@ const { v4: uuidv4 } = require('uuid');
 
 const router = express.Router();
 
+const uploadsDir = process.env.PRM_DATA_PATH
+  ? path.join(process.env.PRM_DATA_PATH, 'uploads')
+  : path.join(__dirname, '..', 'uploads');
+
 const storage = multer.diskStorage({
-  destination: path.join(__dirname, '..', 'uploads'),
+  destination: uploadsDir,
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
     cb(null, uuidv4() + ext);

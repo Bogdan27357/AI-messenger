@@ -12,7 +12,11 @@
     "start:web": "node start.js --web",
     "start:desktop": "node start.js",
     "start:rebuild": "node start.js --build",
-    "electron": "electron ."
+    "electron": "electron .",
+    "dist": "node build-installer.js",
+    "dist:win": "node build-installer.js --win",
+    "dist:mac": "node build-installer.js --mac",
+    "dist:linux": "node build-installer.js --linux"
   },
   "dependencies": {
     "express": "^4.18.2",
@@ -26,6 +30,69 @@
     "concurrently": "^8.2.2"
   },
   "devDependencies": {
-    "electron": "^33.0.0"
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.pulkovo.prm-messenger",
+    "productName": "ПРМ Мессенджер",
+    "directories": {
+      "output": "installer"
+    },
+    "files": [
+      "electron.js",
+      "server/**/*",
+      "client/dist/**/*",
+      "logo.png",
+      "package.json",
+      "node_modules/**/*",
+      "!node_modules/electron/**",
+      "!node_modules/electron-builder/**",
+      "!node_modules/concurrently/**",
+      "!**/*.map",
+      "!**/node_modules/.cache/**"
+    ],
+    "extraResources": [
+      {
+        "from": "server/data",
+        "to": "data",
+        "filter": ["**/*"]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "logo.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "logo.png",
+      "uninstallerIcon": "logo.png",
+      "installerHeaderIcon": "logo.png",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "ПРМ Мессенджер",
+      "installerLanguages": ["ru_RU"],
+      "language": "1049"
+    },
+    "mac": {
+      "target": ["dmg"],
+      "icon": "logo.png",
+      "category": "public.app-category.social-networking"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "icon": "logo.png",
+      "category": "Network;Chat;InstantMessaging",
+      "desktop": {
+        "Name": "ПРМ Мессенджер",
+        "Comment": "Корпоративный мессенджер — Аэропорт Пулково"
+      }
+    }
   }
 }

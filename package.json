@@ -59,6 +59,7 @@
         "filter": ["**/*"]
       }
     ],
+    "forceCodeSigning": false,
     "win": {
       "target": [
         {
@@ -66,7 +67,9 @@
           "arch": ["x64"]
         }
       ],
-      "icon": "logo.png"
+      "icon": "logo.png",
+      "sign": false,
+      "signingHashAlgorithms": null
     },
     "nsis": {
       "oneClick": false,

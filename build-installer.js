@@ -81,9 +81,17 @@ async function main() {
   log('Сборка инсталлятора (это может занять несколько минут)...');
   log('');
 
+  // Disable code signing (no certificate)
+  const buildEnv = {
+    ...process.env,
+    CSC_IDENTITY_AUTO_DISCOVERY: 'false',
+    WIN_CSC_LINK: '',
+    CSC_LINK: ''
+  };
+
   const cmd = `npx electron-builder ${targetFlag} --config`;
   try {
-    execSync(cmd, { cwd: ROOT, stdio: 'inherit' });
+    execSync(cmd, { cwd: ROOT, stdio: 'inherit', env: buildEnv });
   } catch (err) {
     logError('Ошибка сборки. Подробности выше.');
     process.exit(1);

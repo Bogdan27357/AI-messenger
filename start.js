@@ -44,13 +44,45 @@ function ensureDeps() {
   }
 }
 
-// Build client if needed
+// Build client if needed or source is newer than dist
 function ensureBuild() {
   const distDir = path.join(ROOT, 'client', 'dist');
-  if (!fs.existsSync(distDir) || needBuild) {
+  const srcDir = path.join(ROOT, 'client', 'src');
+
+  let shouldBuild = !fs.existsSync(distDir) || needBuild;
+
+  // Auto-rebuild if source files are newer than dist
+  if (!shouldBuild && fs.existsSync(distDir)) {
+    try {
+      const distTime = fs.statSync(path.join(distDir, 'index.html')).mtimeMs;
+      const srcFiles = getNewestFileTime(srcDir);
+      if (srcFiles > distTime) {
+        log('Обнаружены изменения в исходниках, пересборка...');
+        shouldBuild = true;
+      }
+    } catch { shouldBuild = true; }
+  }
+
+  if (shouldBuild) {
     log('Сборка фронтенда...');
     execSync('npx vite build', { cwd: path.join(ROOT, 'client'), stdio: 'inherit' });
   }
+}
+
+function getNewestFileTime(dir) {
+  let newest = 0;
+  try {
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        newest = Math.max(newest, getNewestFileTime(fullPath));
+      } else {
+        newest = Math.max(newest, fs.statSync(fullPath).mtimeMs);
+      }
+    }
+  } catch {}
+  return newest;
 }
 
 // Ensure data directories

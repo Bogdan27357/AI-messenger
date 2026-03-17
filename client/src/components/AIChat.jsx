@@ -32,7 +32,9 @@ export default function AIChat({ onClose }) {
     <div className="ai-chat-panel">
       <div className="ai-chat-header">
         <span className="ai-chat-title">🤖 ИИ-ассистент ПРМ</span>
-        <button className="icon-btn" onClick={onClose}>✕</button>
+        <button className="icon-btn" onClick={onClose}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
       </div>
       <div className="ai-chat-messages">
         {messages.map((msg, i) => (
@@ -50,7 +52,9 @@ export default function AIChat({ onClose }) {
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && sendMessage()}
         />
-        <button className="send-btn" onClick={sendMessage} disabled={loading}>➤</button>
+        <button className="send-btn" onClick={sendMessage} disabled={loading}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
       </div>
     </div>
   );

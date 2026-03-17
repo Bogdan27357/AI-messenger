@@ -104,11 +104,13 @@ export default function BlogPage() {
           )}
           <div className="blog-new-post-actions">
             <label className="icon-btn">
-              {'\u{1F5BC}\uFE0F'} Фото
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <span style={{marginLeft: 4}}>Фото</span>
               <input type="file" accept="image/*" onChange={handleMediaSelect} hidden />
             </label>
             <label className="icon-btn">
-              {'\u{1F3AC}'} Видео
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+              <span style={{marginLeft: 4}}>Видео</span>
               <input type="file" accept="video/*" onChange={handleMediaSelect} hidden />
             </label>
             <button className="btn primary" onClick={createPost} disabled={posting}>
@@ -127,7 +129,9 @@ export default function BlogPage() {
               </div>
               <span className="blog-post-time">{formatTime(post.created_at)}</span>
               {(post.author_id === user.id || user.role === 'admin') && (
-                <button className="icon-btn small" onClick={() => deletePost(post.id)}>{'\u{1F5D1}'}</button>
+                <button className="icon-btn small" onClick={() => deletePost(post.id)}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
               )}
             </div>
 

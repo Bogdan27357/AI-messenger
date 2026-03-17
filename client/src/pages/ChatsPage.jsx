@@ -186,7 +186,7 @@ export default function ChatsPage() {
           )}
           {msg.file_url && !isImage(msg.file_type) && !isVideo(msg.file_type) && (
             <a href={msg.file_url} download={msg.file_name} className="message-file">
-              <span className="message-file-icon">{'\u{1F4CE}'}</span>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
               <span className="message-file-name">{msg.file_name}</span>
             </a>
           )}
@@ -200,9 +200,13 @@ export default function ChatsPage() {
             )}
           </div>
           <div className="message-actions">
-            <button onClick={() => setReplyTo(msg)} title="Ответить">{'\u21A9'}</button>
+            <button onClick={() => setReplyTo(msg)} title="Ответить">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+            </button>
             {(msg.sender_id === user.id || user.role === 'admin') && (
-              <button onClick={() => deleteMessage(msg.id)} title="Удалить">{'\u{1F5D1}'}</button>
+              <button onClick={() => deleteMessage(msg.id)} title="Удалить">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              </button>
             )}
           </div>
         </div>
@@ -217,8 +221,12 @@ export default function ChatsPage() {
         <div className="chat-list-header">
           <h2>Чаты</h2>
           <div className="chat-list-actions">
-            <button className="icon-btn" onClick={() => setShowNewChat(true)} title="Новый чат">{'\u270F\uFE0F'}</button>
-            <button className="icon-btn" onClick={() => setShowNewGroup(true)} title="Новая группа">{'\u{1F465}'}</button>
+            <button className="icon-btn" onClick={() => setShowNewChat(true)} title="Новый чат">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            </button>
+            <button className="icon-btn" onClick={() => setShowNewGroup(true)} title="Новая группа">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </button>
           </div>
         </div>
         <div className="search-box">
@@ -284,7 +292,9 @@ export default function ChatsPage() {
                 </div>
               )}
               <div className="message-input-row">
-                <button className="icon-btn" onClick={() => fileInputRef.current?.click()}>{'\u{1F4CE}'}</button>
+                <button className="icon-btn" onClick={() => fileInputRef.current?.click()}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                </button>
                 <input type="file" ref={fileInputRef} onChange={handleFileUpload} hidden />
                 <input
                   type="text"

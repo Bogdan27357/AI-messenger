@@ -31,11 +31,13 @@
   },
   "devDependencies": {
     "electron": "^33.0.0",
-    "electron-builder": "^25.1.8"
+    "electron-builder": "^25.1.8",
+    "png2icons": "^2.0.1"
   },
   "build": {
     "appId": "com.pulkovo.prm-messenger",
-    "productName": "ПРМ Мессенджер",
+    "productName": "PRM Messenger",
+    "artifactName": "PRM-Messenger-Setup-${version}.${ext}",
     "directories": {
       "output": "installer"
     },
@@ -67,19 +69,19 @@
           "arch": ["x64"]
         }
       ],
-      "icon": "logo.png",
+      "icon": "build/icon.ico",
       "sign": false,
       "signingHashAlgorithms": null
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "installerIcon": "logo.png",
-      "uninstallerIcon": "logo.png",
-      "installerHeaderIcon": "logo.png",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "ПРМ Мессенджер",
+      "shortcutName": "PRM Messenger",
       "installerLanguages": ["ru_RU"],
       "language": "1049"
     },

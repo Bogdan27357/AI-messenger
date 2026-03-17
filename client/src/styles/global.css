@@ -592,17 +592,41 @@ label { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
 .message-status { font-size: 14px; color: rgba(255,255,255,0.45); }
 .message-status.read { color: var(--green); }
 
-.message-image {
-  max-width: 100%;
-  border-radius: var(--radius-sm);
+.message-image-wrap {
+  position: relative;
+  display: inline-block;
   margin-bottom: 4px;
+}
+.message-image-wrap:hover .message-image-download { opacity: 1; }
+.message-image-download {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  opacity: 0;
+  transition: opacity var(--transition);
+  backdrop-filter: blur(4px);
+}
+.message-image-download:hover { background: rgba(0, 0, 0, 0.8); }
+.message-image {
+  max-width: 320px;
+  max-height: 320px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   display: block;
+  object-fit: cover;
 }
 .message-video {
-  max-width: 100%;
+  max-width: 320px;
+  max-height: 320px;
   border-radius: var(--radius-sm);
-  margin-bottom: 4px;
   display: block;
 }
 .message-file {
@@ -1246,7 +1270,7 @@ label { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
 /* ===== AI CHAT ===== */
 .ai-fab {
   position: fixed;
-  bottom: 24px;
+  bottom: 80px;
   right: 24px;
   width: 54px;
   height: 54px;
@@ -1270,7 +1294,7 @@ label { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
 
 .ai-chat-panel {
   position: fixed;
-  bottom: 90px;
+  bottom: 146px;
   right: 24px;
   width: 400px;
   height: 520px;

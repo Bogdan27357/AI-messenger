@@ -95,6 +95,12 @@ export default function ChatsPage() {
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    const MAX_SIZE = 50 * 1024 * 1024; // 50MB
+    if (file.size > MAX_SIZE) {
+      alert(`Файл слишком большой (${(file.size / 1024 / 1024).toFixed(1)} МБ). Максимум: 50 МБ`);
+      e.target.value = '';
+      return;
+    }
     try {
       const uploaded = await uploadFile(file, token);
       await api.post(`/messages/${chatId}`, {
@@ -197,10 +203,20 @@ export default function ChatsPage() {
             </div>
           )}
           {msg.file_url && isImage(msg.file_type) && (
-            <img src={msg.file_url} alt={msg.file_name} className="message-image" />
+            <div className="message-image-wrap">
+              <img src={msg.file_url} alt={msg.file_name} className="message-image" />
+              <a href={msg.file_url} download={msg.file_name} className="message-image-download" title="Скачать">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              </a>
+            </div>
           )}
           {msg.file_url && isVideo(msg.file_type) && (
-            <video src={msg.file_url} controls className="message-video" />
+            <div className="message-image-wrap">
+              <video src={msg.file_url} controls className="message-video" />
+              <a href={msg.file_url} download={msg.file_name} className="message-image-download" title="Скачать">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              </a>
+            </div>
           )}
           {msg.file_url && !isImage(msg.file_type) && !isVideo(msg.file_type) && (
             <a href={msg.file_url} download={msg.file_name} className="message-file">

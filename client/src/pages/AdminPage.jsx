@@ -32,14 +32,11 @@ export default function AdminPage() {
   const [genCount, setGenCount] = useState(5);
   const [genTitle, setGenTitle] = useState('');
 
-  if (user.role !== 'admin') {
-    return <div className="admin-page"><p>Доступ запрещен. Требуются права администратора.</p></div>;
-  }
-
   useEffect(() => {
+    if (user.role !== 'admin') return;
     loadData();
     api.get('/ai/status', token).then(setAiStatus).catch(() => {});
-  }, [token]);
+  }, [token, user.role]);
 
   const loadData = () => {
     api.get('/users', token).then(setUsers).catch(() => {});
@@ -164,6 +161,10 @@ export default function AdminPage() {
   };
 
   const employees = users.filter(u => u.role !== 'admin' || u.id !== user.id);
+
+  if (user.role !== 'admin') {
+    return <div className="admin-page"><p>Доступ запрещен. Требуются права администратора.</p></div>;
+  }
 
   return (
     <div className="admin-page">

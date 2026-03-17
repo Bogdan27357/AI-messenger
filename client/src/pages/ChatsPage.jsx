@@ -33,6 +33,7 @@ export default function ChatsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [replyTo, setReplyTo] = useState(null);
   const [typing, setTyping] = useState({});
+  const [profilePanel, setProfilePanel] = useState(null); // user object or null
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -134,6 +135,23 @@ export default function ChatsPage() {
     if (!searchQuery) return true;
     return (c.name || '').toLowerCase().includes(searchQuery.toLowerCase());
   });
+
+  const openProfilePanel = async (userId) => {
+    try {
+      const userData = await api.get(`/users/${userId}`, token);
+      // Count media from messages
+      const stats = { photos: 0, videos: 0, files: 0, links: 0, voice: 0 };
+      messages.forEach(m => {
+        if (m.file_url && m.file_type?.startsWith('image/')) stats.photos++;
+        else if (m.file_url && m.file_type?.startsWith('video/')) stats.videos++;
+        else if (m.file_url) stats.files++;
+        if (m.text && /https?:\/\/\S+/.test(m.text)) stats.links++;
+      });
+      setProfilePanel({ ...userData, stats });
+    } catch {
+      // ignore
+    }
+  };
 
   const isImage = (type) => type && type.startsWith('image/');
   const isVideo = (type) => type && type.startsWith('video/');
@@ -265,16 +283,22 @@ export default function ChatsPage() {
           <>
             <div className="chat-header">
               <button className="back-btn mobile-only" onClick={() => navigate('/chats')}>{'\u2190'}</button>
-              {getChatAvatar(currentChat, 42)}
-              <div className="chat-header-info">
-                <div className="chat-header-name">{currentChat.name}</div>
-                <div className="chat-header-status">
-                  {Object.keys(typing).length > 0 ? (
-                    <span className="typing-indicator">печатает...</span>
-                  ) : currentChat.type === 'group' ?
-                    `${currentChat.members?.length || 0} участников` :
-                    currentChat.members?.find(m => m.id !== user.id)?.status === 'online' ? 'в сети' : 'не в сети'
-                  }
+              <div className="chat-header-clickable" onClick={() => {
+                if (currentChat.type === 'group') return;
+                const other = currentChat.members?.find(m => m.id !== user.id);
+                if (other) openProfilePanel(other.id);
+              }} style={{ cursor: currentChat.type !== 'group' ? 'pointer' : 'default' }}>
+                {getChatAvatar(currentChat, 42)}
+                <div className="chat-header-info">
+                  <div className="chat-header-name">{currentChat.name}</div>
+                  <div className="chat-header-status">
+                    {Object.keys(typing).length > 0 ? (
+                      <span className="typing-indicator">печатает...</span>
+                    ) : currentChat.type === 'group' ?
+                      `${currentChat.members?.length || 0} участников` :
+                      currentChat.members?.find(m => m.id !== user.id)?.status === 'online' ? 'в сети' : 'не в сети'
+                    }
+                  </div>
                 </div>
               </div>
             </div>
@@ -370,6 +394,93 @@ export default function ChatsPage() {
             <div className="modal-actions">
               <button className="btn primary" onClick={createGroupChat}>Создать</button>
               <button className="btn secondary" onClick={() => setShowNewGroup(false)}>Отмена</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {profilePanel && (
+        <div className="profile-panel-overlay" onClick={() => setProfilePanel(null)}>
+          <div className="profile-panel" onClick={e => e.stopPropagation()}>
+            <button className="profile-panel-close" onClick={() => setProfilePanel(null)}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+
+            <div className="profile-panel-header">
+              <UserAvatar user={profilePanel} size={90} />
+              <div className="profile-panel-name">{profilePanel.full_name}</div>
+              <div className="profile-panel-status">
+                {profilePanel.status === 'online' ? 'в сети' : 'был(а) недавно'}
+              </div>
+            </div>
+
+            <div className="profile-panel-actions">
+              <button className="profile-panel-action" onClick={() => { setProfilePanel(null); }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                <span>Чат</span>
+              </button>
+              <button className="profile-panel-action">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M15.05 5A5 5 0 0 1 19 8.95M15.05 1A9 9 0 0 1 23 8.94M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                <span>Звонок</span>
+              </button>
+              <button className="profile-panel-action">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+                <span>Ещё</span>
+              </button>
+            </div>
+
+            <div className="profile-panel-info">
+              {profilePanel.username && (
+                <div className="profile-panel-row">
+                  <span className="profile-panel-value" style={{ color: 'var(--accent)' }}>@{profilePanel.username}</span>
+                  <span className="profile-panel-label">Имя пользователя</span>
+                </div>
+              )}
+              {profilePanel.position && (
+                <div className="profile-panel-row">
+                  <span className="profile-panel-value">{profilePanel.position}</span>
+                  <span className="profile-panel-label">Должность</span>
+                </div>
+              )}
+              {profilePanel.department && (
+                <div className="profile-panel-row">
+                  <span className="profile-panel-value">{profilePanel.department}</span>
+                  <span className="profile-panel-label">Отдел</span>
+                </div>
+              )}
+              {profilePanel.bio && (
+                <div className="profile-panel-row">
+                  <span className="profile-panel-value">{profilePanel.bio}</span>
+                  <span className="profile-panel-label">О себе</span>
+                </div>
+              )}
+            </div>
+
+            <div className="profile-panel-media">
+              {profilePanel.stats.photos > 0 && (
+                <div className="profile-panel-media-row">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                  <span>{profilePanel.stats.photos} фотографий</span>
+                </div>
+              )}
+              {profilePanel.stats.videos > 0 && (
+                <div className="profile-panel-media-row">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                  <span>{profilePanel.stats.videos} видео</span>
+                </div>
+              )}
+              {profilePanel.stats.files > 0 && (
+                <div className="profile-panel-media-row">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  <span>{profilePanel.stats.files} файлов</span>
+                </div>
+              )}
+              {profilePanel.stats.links > 0 && (
+                <div className="profile-panel-media-row">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                  <span>{profilePanel.stats.links} ссылок</span>
+                </div>
+              )}
             </div>
           </div>
         </div>

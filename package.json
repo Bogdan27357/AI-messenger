@@ -13,8 +13,6 @@
     "start:desktop": "node start.js",
     "start:rebuild": "node start.js --build",
     "electron": "electron .",
-    "predist": "node -e \"try{require('fs').rmSync('build/icon.ico')}catch{}\"",
-    "predist:win": "node -e \"try{require('fs').rmSync('build/icon.ico')}catch{}\"",
     "dist": "node build-installer.js",
     "dist:win": "node build-installer.js --win",
     "dist:mac": "node build-installer.js --mac",
@@ -33,8 +31,7 @@
   },
   "devDependencies": {
     "electron": "^33.0.0",
-    "electron-builder": "^25.1.8",
-    "png-to-ico": "^4.0.0"
+    "electron-builder": "^25.1.8"
   },
   "build": {
     "appId": "com.pulkovo.prm-messenger",
@@ -64,6 +61,7 @@
       }
     ],
     "forceCodeSigning": false,
+    "icon": "logo.png",
     "win": {
       "target": [
         {
@@ -71,16 +69,12 @@
           "arch": ["x64"]
         }
       ],
-      "icon": "build/icon.ico",
       "sign": false,
       "signingHashAlgorithms": null
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "installerIcon": "build/icon.ico",
-      "uninstallerIcon": "build/icon.ico",
-      "installerHeaderIcon": "build/icon.ico",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "PRM Messenger",

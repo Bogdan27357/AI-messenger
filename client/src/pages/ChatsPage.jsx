@@ -54,6 +54,7 @@ export default function ChatsPage() {
   const videoChunksRef = useRef([]);
   const videoTimerRef = useRef(null);
   const videoStreamRef = useRef(null);
+  const lastTypingRef = useRef(0);
   const videoPreviewRef = useRef(null);
 
   useEffect(() => {
@@ -265,6 +266,16 @@ export default function ChatsPage() {
   };
 
   const formatRecTime = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+
+  const emitTyping = () => {
+    const now = Date.now();
+    if (now - lastTypingRef.current < 2000) return;
+    lastTypingRef.current = now;
+    const ws = window.__ws;
+    if (ws && ws.readyState === 1 && chatId) {
+      ws.send(JSON.stringify({ type: 'typing', chatId: parseInt(chatId) }));
+    }
+  };
 
   const EMOJI_LIST = [
     '😀','😂','🤣','😊','😍','🥰','😘','😎','🤩','🥳',
@@ -535,12 +546,31 @@ export default function ChatsPage() {
                 <div className="chat-header-info">
                   <div className="chat-header-name">{currentChat.name}</div>
                   <div className="chat-header-status">
-                    {Object.keys(typing).length > 0 ? (
-                      <span className="typing-indicator">печатает...</span>
-                    ) : currentChat.type === 'group' ?
-                      `${currentChat.members?.length || 0} участников` :
-                      currentChat.members?.find(m => m.id !== user.id)?.status === 'online' ? 'в сети' : 'не в сети'
-                    }
+                    {(() => {
+                      const typingUserIds = Object.keys(typing).map(Number).filter(id => id !== user.id);
+                      if (typingUserIds.length > 0) {
+                        if (currentChat.type === 'group') {
+                          const names = typingUserIds.map(id => {
+                            const m = currentChat.members?.find(u => u.id === id);
+                            return m ? m.full_name.split(' ')[0] : '';
+                          }).filter(Boolean);
+                          return (
+                            <span className="typing-indicator">
+                              {names.join(', ')} печата{names.length > 1 ? 'ют' : 'ет'}
+                              <span className="typing-dots"><span>.</span><span>.</span><span>.</span></span>
+                            </span>
+                          );
+                        }
+                        return (
+                          <span className="typing-indicator">
+                            печатает<span className="typing-dots"><span>.</span><span>.</span><span>.</span></span>
+                          </span>
+                        );
+                      }
+                      return currentChat.type === 'group'
+                        ? `${currentChat.members?.length || 0} участников`
+                        : currentChat.members?.find(m => m.id !== user.id)?.status === 'online' ? 'в сети' : 'не в сети';
+                    })()}
                   </div>
                 </div>
               </div>
@@ -584,7 +614,7 @@ export default function ChatsPage() {
                     type="text"
                     placeholder="Сообщение..."
                     value={messageText}
-                    onChange={e => setMessageText(e.target.value)}
+                    onChange={e => { setMessageText(e.target.value); emitTyping(); }}
                     onKeyDown={e => e.key === 'Enter' && sendMessage()}
                   />
                   {messageText.trim() ? (

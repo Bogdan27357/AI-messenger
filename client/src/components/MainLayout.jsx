@@ -59,7 +59,8 @@ export default function MainLayout({ children }) {
       } catch {}
     };
     setWs(socket);
-    return () => socket.close();
+    window.__ws = socket;
+    return () => { socket.close(); window.__ws = null; };
   }, [token]);
 
   useEffect(() => {

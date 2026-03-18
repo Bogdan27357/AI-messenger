@@ -755,7 +755,27 @@ label { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
 .no-chat-selected img { filter: grayscale(0.3); }
 .no-chat-selected p { font-size: 15px; }
 
-.typing-indicator { font-style: italic; color: var(--text-link); font-size: 13px; }
+.typing-indicator {
+  font-style: italic;
+  color: var(--accent);
+  font-size: 13px;
+  display: inline-flex;
+  align-items: baseline;
+}
+.typing-dots {
+  display: inline-flex;
+  margin-left: 1px;
+}
+.typing-dots span {
+  animation: typingDot 1.4s infinite;
+  font-weight: bold;
+}
+.typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes typingDot {
+  0%, 60%, 100% { opacity: 0.2; }
+  30% { opacity: 1; }
+}
 
 /* ===== MODALS ===== */
 .modal-overlay {

@@ -306,6 +306,7 @@ const initPromise = initSqlJs().then(SQL => {
       post_id INTEGER REFERENCES blog_posts(id) ON DELETE CASCADE,
       author_id INTEGER REFERENCES users(id),
       text TEXT NOT NULL,
+      reply_to INTEGER REFERENCES blog_comments(id),
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);

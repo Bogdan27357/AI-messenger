@@ -34,6 +34,12 @@ export default function ChatsPage() {
   const [replyTo, setReplyTo] = useState(null);
   const [typing, setTyping] = useState({});
   const [profilePanel, setProfilePanel] = useState(null);
+  const [showChatEmoji, setShowChatEmoji] = useState(false);
+  const [showChatGif, setShowChatGif] = useState(false);
+  const [chatGifSearch, setChatGifSearch] = useState('');
+  const [chatGifs, setChatGifs] = useState([]);
+  const [chatGifLoading, setChatGifLoading] = useState(false);
+  const chatGifTimerRef = useRef(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [showVideoNote, setShowVideoNote] = useState(false);
@@ -260,6 +266,49 @@ export default function ChatsPage() {
 
   const formatRecTime = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
+  const EMOJI_LIST = [
+    '😀','😂','🤣','😊','😍','🥰','😘','😎','🤩','🥳',
+    '😢','😭','😤','😡','🤯','😱','🥺','😴','🤔','🤗',
+    '👍','👎','👏','🙌','🤝','💪','❤️','🔥','⭐','🎉',
+    '💯','🙏','😈','💀','🤡','👀','💬','📸','🎵','🚀',
+    '✅','❌','⚡','💎','🌟','🎯','💡','🏆','🎁','🌈',
+  ];
+
+  const openChatGifPicker = () => {
+    setShowChatGif(true);
+    setChatGifSearch('');
+    setChatGifs([]);
+    setChatGifLoading(true);
+    api.get('/gif/trending?limit=20', token).then(d => setChatGifs(d.results || [])).catch(() => {}).finally(() => setChatGifLoading(false));
+  };
+
+  const searchChatGifs = (q) => {
+    setChatGifSearch(q);
+    clearTimeout(chatGifTimerRef.current);
+    if (!q.trim()) {
+      setChatGifLoading(true);
+      api.get('/gif/trending?limit=20', token).then(d => setChatGifs(d.results || [])).catch(() => {}).finally(() => setChatGifLoading(false));
+      return;
+    }
+    chatGifTimerRef.current = setTimeout(async () => {
+      setChatGifLoading(true);
+      try {
+        const data = await api.get(`/gif/search?q=${encodeURIComponent(q)}&limit=20`, token);
+        setChatGifs(data.results || []);
+      } catch { setChatGifs([]); }
+      setChatGifLoading(false);
+    }, 400);
+  };
+
+  const selectChatGif = async (gif) => {
+    setShowChatGif(false);
+    try {
+      await api.post(`/messages/${chatId}`, { text: gif.url, file_url: '', file_name: '', file_type: '' }, token);
+    } catch {}
+  };
+
+  const isGifUrl = (text) => text && /\.(gif|webp)(\?.*)?$/i.test(text.trim()) && text.trim().startsWith('http');
+
   const createPrivateChat = async (userId) => {
     const data = await api.post('/chats/private', { userId }, token);
     setShowNewChat(false);
@@ -394,7 +443,11 @@ export default function ChatsPage() {
               <span className="message-file-name">{msg.file_name}</span>
             </a>
           )}
-          {msg.text && <div className="message-text">{msg.text}</div>}
+          {msg.text && (isGifUrl(msg.text) ? (
+            <img src={msg.text.trim()} alt="GIF" className="message-gif" />
+          ) : (
+            <div className="message-text">{msg.text}</div>
+          ))}
           <div className="message-meta">
             <span className="message-time">{formatTime(msg.created_at)}</span>
             {msg.sender_id === user.id && (
@@ -524,6 +577,9 @@ export default function ChatsPage() {
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                   </button>
                   <input type="file" ref={fileInputRef} onChange={handleFileUpload} hidden />
+                  <button className="icon-btn" onClick={() => { setShowChatEmoji(!showChatEmoji); setShowChatGif(false); }} title="Эмодзи">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+                  </button>
                   <input
                     type="text"
                     placeholder="Сообщение..."
@@ -537,6 +593,9 @@ export default function ChatsPage() {
                     </button>
                   ) : (
                     <>
+                      <button className="icon-btn" onClick={() => { openChatGifPicker(); setShowChatEmoji(false); }} title="GIF">
+                        <span style={{fontWeight: 700, fontSize: 12}}>GIF</span>
+                      </button>
                       <button className="icon-btn" onClick={startVideoNote} title="Видеосообщение">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
                       </button>
@@ -546,6 +605,13 @@ export default function ChatsPage() {
                     </>
                   )}
                 </div>
+                {showChatEmoji && (
+                  <div className="emoji-picker">
+                    {EMOJI_LIST.map(e => (
+                      <button key={e} className="emoji-item" onClick={() => { setMessageText(prev => prev + e); }}>{e}</button>
+                    ))}
+                  </div>
+                )}
               )}
             </div>
 
@@ -564,6 +630,32 @@ export default function ChatsPage() {
                       <button className="btn primary" onClick={startVideoRecording}>Записать</button>
                     )}
                     <button className="btn secondary" onClick={closeVideoNote}>Отмена</button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {showChatGif && (
+              <div className="gif-picker-overlay" onClick={() => setShowChatGif(false)}>
+                <div className="gif-picker" onClick={e => e.stopPropagation()}>
+                  <div className="gif-picker-header">
+                    <input
+                      type="text"
+                      placeholder="Поиск GIF..."
+                      value={chatGifSearch}
+                      onChange={e => searchChatGifs(e.target.value)}
+                      autoFocus
+                    />
+                    <button className="icon-btn" onClick={() => setShowChatGif(false)}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                  </div>
+                  <div className="gif-picker-grid">
+                    {chatGifLoading && <div className="gif-loading">Загрузка...</div>}
+                    {chatGifs.map(g => (
+                      <img key={g.id} src={g.preview || g.url} alt={g.title} onClick={() => selectChatGif(g)} className="gif-item" />
+                    ))}
+                    {!chatGifLoading && chatGifs.length === 0 && <div className="gif-loading">Ничего не найдено</div>}
                   </div>
                 </div>
               </div>

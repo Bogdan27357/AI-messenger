@@ -83,8 +83,12 @@ router.post('/:id/like', (req, res) => {
 // Get comments
 router.get('/:id/comments', (req, res) => {
   const comments = db.prepare(`
-    SELECT bc.*, u.full_name as author_name, u.avatar as author_avatar
-    FROM blog_comments bc JOIN users u ON u.id = bc.author_id
+    SELECT bc.*, u.full_name as author_name, u.avatar as author_avatar,
+      rc.text as reply_text, ru.full_name as reply_author_name
+    FROM blog_comments bc
+    JOIN users u ON u.id = bc.author_id
+    LEFT JOIN blog_comments rc ON rc.id = bc.reply_to
+    LEFT JOIN users ru ON ru.id = rc.author_id
     WHERE bc.post_id = ?
     ORDER BY bc.created_at ASC
   `).all(req.params.id);
@@ -93,13 +97,17 @@ router.get('/:id/comments', (req, res) => {
 
 // Add comment
 router.post('/:id/comments', (req, res) => {
-  const { text } = req.body;
-  const result = db.prepare('INSERT INTO blog_comments (post_id, author_id, text) VALUES (?, ?, ?)')
-    .run(req.params.id, req.user.id, text);
+  const { text, reply_to } = req.body;
+  const result = db.prepare('INSERT INTO blog_comments (post_id, author_id, text, reply_to) VALUES (?, ?, ?, ?)')
+    .run(req.params.id, req.user.id, text, reply_to || null);
 
   const comment = db.prepare(`
-    SELECT bc.*, u.full_name as author_name, u.avatar as author_avatar
-    FROM blog_comments bc JOIN users u ON u.id = bc.author_id
+    SELECT bc.*, u.full_name as author_name, u.avatar as author_avatar,
+      rc.text as reply_text, ru.full_name as reply_author_name
+    FROM blog_comments bc
+    JOIN users u ON u.id = bc.author_id
+    LEFT JOIN blog_comments rc ON rc.id = bc.reply_to
+    LEFT JOIN users ru ON ru.id = rc.author_id
     WHERE bc.id = ?
   `).get(result.lastInsertRowid);
 

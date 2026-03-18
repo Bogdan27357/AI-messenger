@@ -19,6 +19,7 @@ async function startServer() {
   const notificationRoutes = require('./routes/notifications');
   const aiRoutes = require('./routes/ai');
   const contactRoutes = require('./routes/contacts');
+  const gifRoutes = require('./routes/giphy');
   const { authenticateToken } = require('./middleware/auth');
   const wsHandler = require('./ws');
 
@@ -47,6 +48,7 @@ async function startServer() {
   app.use('/api/notifications', authenticateToken, notificationRoutes);
   app.use('/api/ai', authenticateToken, aiRoutes);
   app.use('/api/contacts', authenticateToken, contactRoutes);
+  app.use('/api/gif', authenticateToken, gifRoutes);
 
   // Serve frontend in production
   if (process.env.NODE_ENV === 'production') {

@@ -589,8 +589,9 @@ label { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
 }
 .message-time { font-size: 11px; color: rgba(255,255,255,0.45); }
 .message.own .message-time { color: rgba(255,255,255,0.55); }
-.message-status { font-size: 14px; color: rgba(255,255,255,0.45); }
-.message-status.read { color: var(--green); }
+.message-status { color: rgba(255,255,255,0.4); display: inline-flex; margin-left: 2px; }
+.message-status svg { width: 16px; height: 10px; }
+.message-status.read svg { color: #34b7f1; }
 
 .message-image-wrap {
   position: relative;
@@ -882,6 +883,35 @@ label { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
   backdrop-filter: blur(4px);
 }
 .remove-media:hover { background: rgba(0,0,0,0.8); }
+
+/* Blog feed tabs */
+.blog-feed-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 16px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius);
+  padding: 4px;
+}
+.blog-feed-tabs button {
+  flex: 1;
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: calc(var(--radius) - 2px);
+  font-size: 14px;
+  font-weight: 500;
+  transition: all var(--transition);
+}
+.blog-feed-tabs button.active {
+  background: var(--accent);
+  color: #fff;
+}
+.blog-feed-tabs button:hover:not(.active) {
+  background: rgba(255,255,255,0.05);
+}
 
 .blog-post {
   background: var(--bg-secondary);
@@ -1501,6 +1531,90 @@ label { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
 }
 .profile-panel-media-row:hover { background: rgba(255,255,255,0.05); }
 .profile-panel-media-row svg { color: var(--text-secondary); flex-shrink: 0; }
+
+/* ===== VOICE MESSAGES ===== */
+.message-voice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.message-voice svg { color: var(--accent); flex-shrink: 0; }
+.message-voice audio {
+  height: 36px;
+  max-width: 260px;
+  flex: 1;
+}
+.message-voice audio::-webkit-media-controls-panel { background: rgba(255,255,255,0.06); border-radius: 18px; }
+
+/* ===== VIDEO NOTES (circular) ===== */
+.message-videonote { margin-bottom: 4px; }
+.videonote-player {
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--accent);
+  background: #000;
+}
+
+/* Recording indicator in input */
+.message-input-row.recording {
+  background: rgba(255, 59, 48, 0.08);
+  border-radius: var(--radius);
+  padding: 4px;
+}
+.recording-indicator {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+}
+.recording-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ff3b30;
+  animation: pulse-dot 1s infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+.recording-time { font-size: 14px; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.recording-cancel { color: #ff3b30 !important; }
+
+/* Video note recorder overlay */
+.videonote-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.videonote-recorder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.videonote-preview {
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid var(--accent);
+  background: #000;
+  transform: scaleX(-1);
+}
+.videonote-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 
 /* Chat header clickable area */
 .chat-header-clickable {

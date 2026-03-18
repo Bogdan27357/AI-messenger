@@ -1,6 +1,6 @@
 const express = require('express');
 const db = require('../database');
-const { sendToChat } = require('../ws');
+const { sendToChat, sendToUser } = require('../ws');
 
 const router = express.Router();
 
@@ -26,9 +26,19 @@ router.get('/:chatId', (req, res) => {
     LIMIT ? OFFSET ?
   `).all(chatId, limit, offset);
 
-  // Mark as read
-  db.prepare('UPDATE messages SET is_read = 1 WHERE chat_id = ? AND sender_id != ? AND is_read = 0')
-    .run(chatId, req.user.id);
+  // Mark as read and notify senders
+  const unread = db.prepare('SELECT id, sender_id FROM messages WHERE chat_id = ? AND sender_id != ? AND is_read = 0')
+    .all(chatId, req.user.id);
+  if (unread.length > 0) {
+    db.prepare('UPDATE messages SET is_read = 1 WHERE chat_id = ? AND sender_id != ? AND is_read = 0')
+      .run(chatId, req.user.id);
+    // Notify all senders that their messages were read
+    const senderIds = [...new Set(unread.map(m => m.sender_id))];
+    for (const senderId of senderIds) {
+      const msgIds = unread.filter(m => m.sender_id === senderId).map(m => m.id);
+      sendToUser(senderId, { type: 'messages_read', chatId: parseInt(chatId), messageIds: msgIds, readBy: req.user.id });
+    }
+  }
 
   res.json(messages.reverse());
 });

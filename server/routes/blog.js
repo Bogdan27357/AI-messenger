@@ -3,22 +3,30 @@ const db = require('../database');
 
 const router = express.Router();
 
-// Get all posts (feed)
+// Get all posts (feed) — ?feed=contacts shows only contacts' posts
 router.get('/', (req, res) => {
   const limit = parseInt(req.query.limit) || 20;
   const offset = parseInt(req.query.offset) || 0;
+  const contactsOnly = req.query.feed === 'contacts';
 
-  const posts = db.prepare(`
+  let sql = `
     SELECT bp.*, u.full_name as author_name, u.avatar as author_avatar, u.position as author_position,
       (SELECT COUNT(*) FROM blog_likes bl WHERE bl.post_id = bp.id) as likes_count,
       (SELECT COUNT(*) FROM blog_comments bc WHERE bc.post_id = bp.id) as comments_count,
       (SELECT 1 FROM blog_likes bl WHERE bl.post_id = bp.id AND bl.user_id = ?) as is_liked
     FROM blog_posts bp
     JOIN users u ON u.id = bp.author_id
-    ORDER BY bp.created_at DESC
-    LIMIT ? OFFSET ?
-  `).all(req.user.id, limit, offset);
+  `;
 
+  if (contactsOnly) {
+    sql += ` WHERE (bp.author_id IN (SELECT contact_id FROM contacts WHERE user_id = ?) OR bp.author_id = ?)`;
+    sql += ` ORDER BY bp.created_at DESC LIMIT ? OFFSET ?`;
+    const posts = db.prepare(sql).all(req.user.id, req.user.id, req.user.id, limit, offset);
+    return res.json(posts);
+  }
+
+  sql += ` ORDER BY bp.created_at DESC LIMIT ? OFFSET ?`;
+  const posts = db.prepare(sql).all(req.user.id, limit, offset);
   res.json(posts);
 });
 

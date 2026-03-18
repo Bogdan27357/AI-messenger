@@ -14,12 +14,16 @@ export default function BlogPage() {
   const [expandedComments, setExpandedComments] = useState({});
   const [comments, setComments] = useState({});
   const [commentTexts, setCommentTexts] = useState({});
+  const [feedMode, setFeedMode] = useState('all'); // 'all' | 'contacts'
 
   useEffect(() => {
     loadPosts();
-  }, [token]);
+  }, [token, feedMode]);
 
-  const loadPosts = () => api.get('/blog', token).then(setPosts).catch(() => {});
+  const loadPosts = () => {
+    const query = feedMode === 'contacts' ? '/blog?feed=contacts' : '/blog';
+    api.get(query, token).then(setPosts).catch(() => {});
+  };
 
   const handleMediaSelect = (e) => {
     const file = e.target.files[0];
@@ -83,6 +87,10 @@ export default function BlogPage() {
   return (
     <div className="blog-page">
       <div className="blog-container">
+        <div className="blog-feed-tabs">
+          <button className={feedMode === 'all' ? 'active' : ''} onClick={() => setFeedMode('all')}>Все</button>
+          <button className={feedMode === 'contacts' ? 'active' : ''} onClick={() => setFeedMode('contacts')}>Контакты</button>
+        </div>
         <div className="blog-new-post">
           <div className="blog-new-post-header">
             <UserAvatar user={user} size={40} />

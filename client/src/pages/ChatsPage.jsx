@@ -33,9 +33,22 @@ export default function ChatsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [replyTo, setReplyTo] = useState(null);
   const [typing, setTyping] = useState({});
-  const [profilePanel, setProfilePanel] = useState(null); // user object or null
+  const [profilePanel, setProfilePanel] = useState(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [showVideoNote, setShowVideoNote] = useState(false);
+  const [isRecordingVideo, setIsRecordingVideo] = useState(false);
+  const [videoRecordingTime, setVideoRecordingTime] = useState(0);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const recordingTimerRef = useRef(null);
+  const videoRecorderRef = useRef(null);
+  const videoChunksRef = useRef([]);
+  const videoTimerRef = useRef(null);
+  const videoStreamRef = useRef(null);
+  const videoPreviewRef = useRef(null);
 
   useEffect(() => {
     loadChats();
@@ -67,6 +80,16 @@ export default function ChatsPage() {
       }
       if (data.type === 'message_deleted') {
         setMessages(prev => prev.filter(m => m.id !== data.messageId));
+      }
+      if (data.type === 'messages_read' && data.chatId === parseInt(chatId)) {
+        setMessages(prev => prev.map(m =>
+          data.messageIds.includes(m.id) ? { ...m, is_read: 1 } : m
+        ));
+      }
+      if (data.type === 'message_read' && data.chatId === parseInt(chatId)) {
+        setMessages(prev => prev.map(m =>
+          m.id === data.messageId ? { ...m, is_read: 1 } : m
+        ));
       }
       if (data.type === 'typing' && data.chatId === parseInt(chatId)) {
         setTyping(prev => ({ ...prev, [data.userId]: Date.now() }));
@@ -115,6 +138,128 @@ export default function ChatsPage() {
     e.target.value = '';
   };
 
+  // Voice recording
+  const startVoiceRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4' });
+      audioChunksRef.current = [];
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+      recorder.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(audioChunksRef.current, { type: recorder.mimeType });
+        const ext = recorder.mimeType.includes('webm') ? 'webm' : 'm4a';
+        const file = new File([blob], `voice_${Date.now()}.${ext}`, { type: recorder.mimeType });
+        try {
+          const uploaded = await uploadFile(file, token);
+          await api.post(`/messages/${chatId}`, {
+            text: '',
+            file_url: uploaded.url,
+            file_name: file.name,
+            file_type: `audio/${ext}`
+          }, token);
+        } catch { alert('Ошибка отправки голосового'); }
+      };
+      recorder.start();
+      mediaRecorderRef.current = recorder;
+      setIsRecording(true);
+      setRecordingTime(0);
+      recordingTimerRef.current = setInterval(() => setRecordingTime(t => t + 1), 1000);
+    } catch {
+      alert('Нет доступа к микрофону');
+    }
+  };
+
+  const stopVoiceRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    clearInterval(recordingTimerRef.current);
+    setIsRecording(false);
+    setRecordingTime(0);
+  };
+
+  const cancelVoiceRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.ondataavailable = null;
+      mediaRecorderRef.current.onstop = () => {};
+      mediaRecorderRef.current.stop();
+    }
+    clearInterval(recordingTimerRef.current);
+    setIsRecording(false);
+    setRecordingTime(0);
+  };
+
+  // Video note (circular) recording
+  const startVideoNote = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 320, facingMode: 'user' }, audio: true });
+      videoStreamRef.current = stream;
+      setShowVideoNote(true);
+      setTimeout(() => {
+        if (videoPreviewRef.current) {
+          videoPreviewRef.current.srcObject = stream;
+          videoPreviewRef.current.play();
+        }
+      }, 100);
+    } catch {
+      alert('Нет доступа к камере');
+    }
+  };
+
+  const startVideoRecording = () => {
+    const stream = videoStreamRef.current;
+    if (!stream) return;
+    const recorder = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported('video/webm') ? 'video/webm' : 'video/mp4' });
+    videoChunksRef.current = [];
+    recorder.ondataavailable = (e) => { if (e.data.size > 0) videoChunksRef.current.push(e.data); };
+    recorder.onstop = async () => {
+      const blob = new Blob(videoChunksRef.current, { type: recorder.mimeType });
+      const ext = recorder.mimeType.includes('webm') ? 'webm' : 'mp4';
+      const file = new File([blob], `videonote_${Date.now()}.${ext}`, { type: `video/${ext}` });
+      try {
+        const uploaded = await uploadFile(file, token);
+        await api.post(`/messages/${chatId}`, {
+          text: '',
+          file_url: uploaded.url,
+          file_name: file.name,
+          file_type: `video/${ext}`
+        }, token);
+      } catch { alert('Ошибка отправки видеосообщения'); }
+      closeVideoNote();
+    };
+    recorder.start();
+    videoRecorderRef.current = recorder;
+    setIsRecordingVideo(true);
+    setVideoRecordingTime(0);
+    videoTimerRef.current = setInterval(() => setVideoRecordingTime(t => t + 1), 1000);
+  };
+
+  const stopVideoRecording = () => {
+    if (videoRecorderRef.current && videoRecorderRef.current.state !== 'inactive') {
+      videoRecorderRef.current.stop();
+    }
+    clearInterval(videoTimerRef.current);
+    setIsRecordingVideo(false);
+    setVideoRecordingTime(0);
+  };
+
+  const closeVideoNote = () => {
+    if (videoStreamRef.current) videoStreamRef.current.getTracks().forEach(t => t.stop());
+    if (videoRecorderRef.current && videoRecorderRef.current.state !== 'inactive') {
+      videoRecorderRef.current.ondataavailable = null;
+      videoRecorderRef.current.onstop = () => {};
+      videoRecorderRef.current.stop();
+    }
+    clearInterval(videoTimerRef.current);
+    videoStreamRef.current = null;
+    setShowVideoNote(false);
+    setIsRecordingVideo(false);
+    setVideoRecordingTime(0);
+  };
+
+  const formatRecTime = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+
   const createPrivateChat = async (userId) => {
     const data = await api.post('/chats/private', { userId }, token);
     setShowNewChat(false);
@@ -144,18 +289,32 @@ export default function ChatsPage() {
 
   const openProfilePanel = async (userId) => {
     try {
-      const userData = await api.get(`/users/${userId}`, token);
-      // Count media from messages
+      const [userData, contactCheck] = await Promise.all([
+        api.get(`/users/${userId}`, token),
+        api.get(`/contacts/check/${userId}`, token)
+      ]);
       const stats = { photos: 0, videos: 0, files: 0, links: 0, voice: 0 };
       messages.forEach(m => {
         if (m.file_url && m.file_type?.startsWith('image/')) stats.photos++;
         else if (m.file_url && m.file_type?.startsWith('video/')) stats.videos++;
+        else if (m.file_url && m.file_type?.startsWith('audio/')) stats.voice++;
         else if (m.file_url) stats.files++;
         if (m.text && /https?:\/\/\S+/.test(m.text)) stats.links++;
       });
-      setProfilePanel({ ...userData, stats });
+      setProfilePanel({ ...userData, stats, isContact: contactCheck.isContact });
     } catch {
       // ignore
+    }
+  };
+
+  const toggleContact = async (userId) => {
+    if (!profilePanel) return;
+    if (profilePanel.isContact) {
+      await api.delete(`/contacts/${userId}`, token);
+      setProfilePanel({ ...profilePanel, isContact: false });
+    } else {
+      await api.post(`/contacts/${userId}`, {}, token);
+      setProfilePanel({ ...profilePanel, isContact: true });
     }
   };
 
@@ -210,7 +369,7 @@ export default function ChatsPage() {
               </a>
             </div>
           )}
-          {msg.file_url && isVideo(msg.file_type) && (
+          {msg.file_url && isVideo(msg.file_type) && !msg.file_name?.startsWith('videonote_') && (
             <div className="message-image-wrap">
               <video src={msg.file_url} controls className="message-video" />
               <a href={msg.file_url} download={msg.file_name} className="message-image-download" title="Скачать">
@@ -218,7 +377,18 @@ export default function ChatsPage() {
               </a>
             </div>
           )}
-          {msg.file_url && !isImage(msg.file_type) && !isVideo(msg.file_type) && (
+          {msg.file_url && msg.file_type?.startsWith('audio/') && (
+            <div className="message-voice">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+              <audio src={msg.file_url} controls preload="metadata" />
+            </div>
+          )}
+          {msg.file_url && msg.file_type?.startsWith('video/') && msg.file_name?.startsWith('videonote_') && (
+            <div className="message-videonote">
+              <video src={msg.file_url} controls className="videonote-player" />
+            </div>
+          )}
+          {msg.file_url && !isImage(msg.file_type) && !isVideo(msg.file_type) && !msg.file_type?.startsWith('audio/') && (
             <a href={msg.file_url} download={msg.file_name} className="message-file">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
               <span className="message-file-name">{msg.file_name}</span>
@@ -229,7 +399,11 @@ export default function ChatsPage() {
             <span className="message-time">{formatTime(msg.created_at)}</span>
             {msg.sender_id === user.id && (
               <span className={`message-status ${msg.is_read ? 'read' : ''}`}>
-                {msg.is_read ? '\u2713\u2713' : '\u2713'}
+                {msg.is_read ? (
+                  <svg viewBox="0 0 16 11" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 5.5 4.5 9 4.5 9"/><polyline points="4 5.5 7.5 9 15 1"/><polyline points="11 1 7.5 5"/></svg>
+                ) : (
+                  <svg viewBox="0 0 16 11" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 5.5 5.5 9.5 14.5 1"/></svg>
+                )}
               </span>
             )}
           </div>
@@ -331,25 +505,69 @@ export default function ChatsPage() {
                   <button onClick={() => setReplyTo(null)}>{'\u2715'}</button>
                 </div>
               )}
-              <div className="message-input-row">
-                <button className="icon-btn" onClick={() => fileInputRef.current?.click()}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-                </button>
-                <input type="file" ref={fileInputRef} onChange={handleFileUpload} hidden />
-                <input
-                  type="text"
-                  placeholder="Сообщение..."
-                  value={messageText}
-                  onChange={e => setMessageText(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && sendMessage()}
-                />
-                <button className="send-btn" onClick={sendMessage}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-                  </svg>
-                </button>
-              </div>
+              {isRecording ? (
+                <div className="message-input-row recording">
+                  <button className="icon-btn recording-cancel" onClick={cancelVoiceRecording} title="Отмена">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                  <div className="recording-indicator">
+                    <span className="recording-dot" />
+                    <span className="recording-time">{formatRecTime(recordingTime)}</span>
+                  </div>
+                  <button className="send-btn" onClick={stopVoiceRecording} title="Отправить">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                  </button>
+                </div>
+              ) : (
+                <div className="message-input-row">
+                  <button className="icon-btn" onClick={() => fileInputRef.current?.click()} title="Файл">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                  </button>
+                  <input type="file" ref={fileInputRef} onChange={handleFileUpload} hidden />
+                  <input
+                    type="text"
+                    placeholder="Сообщение..."
+                    value={messageText}
+                    onChange={e => setMessageText(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && sendMessage()}
+                  />
+                  {messageText.trim() ? (
+                    <button className="send-btn" onClick={sendMessage} title="Отправить">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                    </button>
+                  ) : (
+                    <>
+                      <button className="icon-btn" onClick={startVideoNote} title="Видеосообщение">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                      </button>
+                      <button className="icon-btn" onClick={startVoiceRecording} title="Голосовое сообщение">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
+
+            {showVideoNote && (
+              <div className="videonote-overlay" onClick={closeVideoNote}>
+                <div className="videonote-recorder" onClick={e => e.stopPropagation()}>
+                  <video ref={videoPreviewRef} muted className="videonote-preview" />
+                  <div className="videonote-controls">
+                    {isRecordingVideo ? (
+                      <>
+                        <span className="recording-dot" />
+                        <span className="recording-time">{formatRecTime(videoRecordingTime)}</span>
+                        <button className="btn primary" onClick={stopVideoRecording}>Отправить</button>
+                      </>
+                    ) : (
+                      <button className="btn primary" onClick={startVideoRecording}>Записать</button>
+                    )}
+                    <button className="btn secondary" onClick={closeVideoNote}>Отмена</button>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         ) : (
           <div className="no-chat-selected">
@@ -435,9 +653,15 @@ export default function ChatsPage() {
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                 <span>Чат</span>
               </button>
-              <button className="profile-panel-action">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M15.05 5A5 5 0 0 1 19 8.95M15.05 1A9 9 0 0 1 23 8.94M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                <span>Звонок</span>
+              <button className={`profile-panel-action ${profilePanel.isContact ? 'active' : ''}`} onClick={() => toggleContact(profilePanel.id)}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  {profilePanel.isContact ? (
+                    <><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></>
+                  ) : (
+                    <><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></>
+                  )}
+                </svg>
+                <span>{profilePanel.isContact ? 'В контактах' : 'Добавить'}</span>
               </button>
               <button className="profile-panel-action">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>

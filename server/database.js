@@ -394,6 +394,15 @@ const initPromise = initSqlJs().then(SQL => {
     )
   `);
 
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS contacts (
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      contact_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (user_id, contact_id)
+    )
+  `);
+
   // Create default admin user
   const adminExists = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
   if (!adminExists) {

@@ -1,0 +1,16 @@
+{
+  "id": "delay_certificate",
+  "title": "Справка о задержке рейса",
+  "department": "passenger",
+  "model": "llama3.1:8b",
+  "fields": [
+    {"name": "flight_number", "label": "Номер рейса", "type": "text", "required": true, "source": "1c"},
+    {"name": "passenger_name", "label": "ФИО пассажира", "type": "text", "required": true, "source": "1c"},
+    {"name": "departure_city", "label": "Город вылета", "type": "text", "required": true, "source": "1c"},
+    {"name": "arrival_city", "label": "Город прилёта", "type": "text", "required": true, "source": "1c"},
+    {"name": "scheduled_date", "label": "Плановая дата вылета", "type": "date", "required": true, "source": "1c"},
+    {"name": "delay_hours", "label": "Время задержки (ч)", "type": "number", "required": true, "source": "manual"},
+    {"name": "reason", "label": "Причина задержки", "type": "text", "required": false, "source": "ai"},
+    {"name": "compensation", "label": "Компенсация", "type": "text", "required": false, "source": "ai"}
+  ]
+}

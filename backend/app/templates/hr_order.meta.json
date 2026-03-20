@@ -1,0 +1,15 @@
+{
+  "id": "hr_order",
+  "title": "Кадровый приказ",
+  "department": "hr",
+  "model": "llama3.1:8b",
+  "fields": [
+    {"name": "employee_name", "label": "ФИО сотрудника", "type": "text", "required": true, "source": "1c"},
+    {"name": "employee_position", "label": "Должность", "type": "text", "required": true, "source": "1c"},
+    {"name": "employee_department", "label": "Отдел", "type": "text", "required": true, "source": "1c"},
+    {"name": "order_type", "label": "Тип приказа", "type": "select", "required": true, "source": "manual"},
+    {"name": "effective_date", "label": "Дата вступления в силу", "type": "date", "required": true, "source": "manual"},
+    {"name": "order_text", "label": "Текст приказа", "type": "textarea", "required": false, "source": "ai"},
+    {"name": "basis", "label": "Основание", "type": "text", "required": false, "source": "ai"}
+  ]
+}

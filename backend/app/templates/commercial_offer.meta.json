@@ -1,0 +1,15 @@
+{
+  "id": "commercial_offer",
+  "title": "Коммерческое предложение",
+  "department": "commercial",
+  "model": "llama3.1:8b",
+  "fields": [
+    {"name": "client_name", "label": "Наименование клиента", "type": "text", "required": true, "source": "1c"},
+    {"name": "client_inn", "label": "ИНН клиента", "type": "text", "required": false, "source": "1c"},
+    {"name": "service_type", "label": "Тип услуги", "type": "text", "required": true, "source": "manual"},
+    {"name": "price", "label": "Стоимость", "type": "number", "required": true, "source": "manual"},
+    {"name": "validity_days", "label": "Срок действия (дней)", "type": "number", "required": true, "source": "manual"},
+    {"name": "description", "label": "Описание услуги", "type": "textarea", "required": false, "source": "ai"},
+    {"name": "advantages", "label": "Преимущества", "type": "textarea", "required": false, "source": "ai"}
+  ]
+}

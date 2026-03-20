@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    ports: ["8000:8000"]
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://pulkovo:secret@postgres:5432/pulkovo
+      - OLLAMA_URL=http://ollama:11434
+      - QDRANT_URL=http://qdrant:6333
+      - ONEC_URL=https://1c.pulkovo.internal/api
+      - ONEC_TOKEN=${ONEC_TOKEN}
+      - DIADOC_API_URL=https://diadoc-api.kontur.ru
+      - DIADOC_API_KEY=${DIADOC_API_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+    depends_on: [postgres, ollama, qdrant]
+    restart: always
+
+  frontend:
+    build: ./frontend
+    ports: ["3000:3000"]
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend:8000
+    depends_on: [backend]
+    restart: always
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: pulkovo
+      POSTGRES_USER: pulkovo
+      POSTGRES_PASSWORD: secret
+    volumes: [pgdata:/var/lib/postgresql/data]
+    restart: always
+
+  ollama:
+    image: ollama/ollama:latest
+    ports: ["11434:11434"]
+    volumes: [ollama_data:/root/.ollama]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: always
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports: ["6333:6333"]
+    volumes: [qdrant_data:/qdrant/storage]
+    restart: always
+
+  nginx:
+    image: nginx:alpine
+    ports: ["443:443", "80:80"]
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/certs:/etc/ssl/certs
+    depends_on: [backend, frontend]
+    restart: always
+
+volumes:
+  pgdata:
+  ollama_data:
+  qdrant_data:

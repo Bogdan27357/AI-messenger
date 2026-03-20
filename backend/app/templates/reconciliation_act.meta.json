@@ -1,0 +1,15 @@
+{
+  "id": "reconciliation_act",
+  "title": "Акт сверки взаиморасчётов",
+  "department": "finance",
+  "model": "llama3.1:8b",
+  "fields": [
+    {"name": "counterparty_name", "label": "Наименование контрагента", "type": "text", "required": true, "source": "1c"},
+    {"name": "counterparty_inn", "label": "ИНН контрагента", "type": "text", "required": true, "source": "1c"},
+    {"name": "period_start", "label": "Начало периода", "type": "date", "required": true, "source": "manual"},
+    {"name": "period_end", "label": "Конец периода", "type": "date", "required": true, "source": "manual"},
+    {"name": "our_balance", "label": "Сальдо по нашим данным", "type": "number", "required": true, "source": "1c"},
+    {"name": "their_balance", "label": "Сальдо по данным контрагента", "type": "number", "required": false, "source": "manual"},
+    {"name": "discrepancy_note", "label": "Примечание о расхождениях", "type": "text", "required": false, "source": "ai"}
+  ]
+}

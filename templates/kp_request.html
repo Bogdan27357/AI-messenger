@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; font-size: 14px; color: #333; }
+        .header { background: #2c3e50; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; }
+        .highlight { background: #ecf0f1; padding: 15px; border-radius: 5px; margin: 15px 0; }
+        .footer { background: #f8f9fa; padding: 15px; font-size: 12px; color: #666; border-top: 1px solid #ddd; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background: #2c3e50; color: white; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>Запрос коммерческого предложения</h2>
+        <p>Заявка № {{ request_number }}</p>
+    </div>
+
+    <div class="content">
+        <p>Уважаемые коллеги!</p>
+
+        <p>Компания <strong>{{ company_name }}</strong> просит вас предоставить коммерческое предложение на поставку следующих товаров/услуг:</p>
+
+        <div class="highlight">
+            <table>
+                <tr>
+                    <th>Параметр</th>
+                    <th>Значение</th>
+                </tr>
+                <tr>
+                    <td>Номер заявки</td>
+                    <td><strong>{{ request_number }}</strong></td>
+                </tr>
+                <tr>
+                    <td>Наименование ТМЦ</td>
+                    <td>{{ tmc_name }}</td>
+                </tr>
+                <tr>
+                    <td>Описание / ТЗ</td>
+                    <td>{{ description }}</td>
+                </tr>
+                {% if quantity %}
+                <tr>
+                    <td>Количество</td>
+                    <td>{{ quantity }}</td>
+                </tr>
+                {% endif %}
+            </table>
+        </div>
+
+        <p>Просим в коммерческом предложении указать:</p>
+        <ul>
+            <li>Стоимость (с НДС и без НДС)</li>
+            <li>Сроки поставки</li>
+            <li>Условия оплаты</li>
+            <li>Срок действия предложения</li>
+            <li>Гарантийные обязательства</li>
+        </ul>
+
+        <p><strong>Срок подачи КП: до {{ deadline_date }}</strong></p>
+
+        {% if attachment_note %}
+        <p><em>Во вложении — техническое задание с подробными требованиями.</em></p>
+        {% endif %}
+
+        <p>Ответ просим направить на данный адрес электронной почты с указанием номера заявки <strong>{{ request_number }}</strong> в теме письма.</p>
+
+        <p>С уважением,<br>
+        Отдел закупок<br>
+        {{ company_name }}</p>
+    </div>
+
+    <div class="footer">
+        <p>Это письмо сформировано автоматически. Если вы получили его по ошибке, пожалуйста, сообщите отправителю.</p>
+    </div>
+</body>
+</html>

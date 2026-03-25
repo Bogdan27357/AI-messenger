@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; font-size: 13px; color: #333; max-width: 900px; margin: 0 auto; }
+        .header { background: #2c3e50; color: white; padding: 20px; }
+        .status-approved { background: #27ae60; color: white; padding: 10px 20px; display: inline-block; border-radius: 4px; }
+        .status-revision { background: #f39c12; color: white; padding: 10px 20px; display: inline-block; border-radius: 4px; }
+        .status-blocked { background: #e74c3c; color: white; padding: 10px 20px; display: inline-block; border-radius: 4px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .section h3 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 5px; }
+        .risk-low { color: #27ae60; font-weight: bold; }
+        .risk-medium { color: #f39c12; font-weight: bold; }
+        .risk-high { color: #e67e22; font-weight: bold; }
+        .risk-critical { color: #e74c3c; font-weight: bold; }
+        table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
+        th { background: #34495e; color: white; }
+        .error-item { background: #fdedec; padding: 10px; margin: 5px 0; border-left: 4px solid #e74c3c; }
+        .edit-item { background: #eaf2f8; padding: 10px; margin: 5px 0; border-left: 4px solid #3498db; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Отчёт юридической экспертизы</h1>
+        <p>Договор: {{ contract_title }} ({{ contract_number }})</p>
+        <p>Контрагент: {{ counterparty_name }} (ИНН: {{ counterparty_inn }})</p>
+        <p>Дата проверки: {{ review_date }}</p>
+    </div>
+
+    <div class="section">
+        <h3>1. Общий статус проверки</h3>
+        {% if overall_status == "approved" %}
+        <span class="status-approved">✓ ГОДНО</span>
+        {% elif overall_status == "needs_revision" %}
+        <span class="status-revision">⚠ ТРЕБУЕТСЯ ДОРАБОТКА</span>
+        {% else %}
+        <span class="status-blocked">✗ БЛОКИРОВАТЬ</span>
+        {% endif %}
+        <p>Интегральная оценка риска: <span class="risk-{{ overall_risk }}">{{ overall_risk | upper }}</span></p>
+    </div>
+
+    {% if critical_errors %}
+    <div class="section">
+        <h3>2. Критические ошибки</h3>
+        {% for error in critical_errors %}
+        <div class="error-item">
+            <strong>{{ error.section }}</strong>: {{ error.description }}
+            {% if error.details %}<br><em>{{ error.details }}</em>{% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if recommended_edits %}
+    <div class="section">
+        <h3>3. Рекомендуемые правки</h3>
+        {% for edit in recommended_edits %}
+        <div class="edit-item">
+            <strong>{{ edit.section }}</strong><br>
+            <em>Текущая формулировка:</em> {{ edit.current_text }}<br>
+            <em>Предложенный вариант:</em> {{ edit.suggested_text }}<br>
+            <em>Обоснование:</em> {{ edit.rationale }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if discrepancies %}
+    <div class="section">
+        <h3>4. Сводная таблица расхождений</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Пункт</th>
+                    <th>Формулировка в договоре</th>
+                    <th>Формулировка в эталоне</th>
+                    <th>Тип</th>
+                    <th>Критичность</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in discrepancies %}
+                <tr>
+                    <td>{{ d.section }}</td>
+                    <td>{{ d.current_text }}</td>
+                    <td>{{ d.standard_text }}</td>
+                    <td>{{ d.type }}</td>
+                    <td><span class="risk-{{ d.severity }}">{{ d.severity }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <div class="section">
+        <h3>5. Оценка рисков по разделам</h3>
+        <table>
+            <thead>
+                <tr><th>Раздел</th><th>Уровень риска</th><th>Комментарий</th></tr>
+            </thead>
+            <tbody>
+                {% for section_name, section_data in risk_sections.items() %}
+                <tr>
+                    <td>{{ section_name }}</td>
+                    <td><span class="risk-{{ section_data.level }}">{{ section_data.level }}</span></td>
+                    <td>{{ section_data.comment }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if counterparty_check %}
+    <div class="section">
+        <h3>6. Проверка контрагента</h3>
+        <table>
+            <tr><th>Проверка</th><th>Результат</th></tr>
+            <tr><td>ЕГРЮЛ</td><td>{{ counterparty_check.egrul | default('Не проверено') }}</td></tr>
+            <tr><td>Арбитражные дела</td><td>{{ counterparty_check.arbitration | default('Не проверено') }}</td></tr>
+            <tr><td>Реестр банкротств</td><td>{{ counterparty_check.bankruptcy | default('Не проверено') }}</td></tr>
+            <tr><td>ФНС</td><td>{{ counterparty_check.fns | default('Не проверено') }}</td></tr>
+        </table>
+    </div>
+    {% endif %}
+
+    <div style="padding: 15px; font-size: 11px; color: #999; border-top: 1px solid #ddd; margin-top: 20px;">
+        Отчёт сформирован автоматически системой MAS AI. Рекомендуется верификация юристом.
+    </div>
+</body>
+</html>

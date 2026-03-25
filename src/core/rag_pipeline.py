@@ -15,9 +15,28 @@ from src.core.qdrant_client import QdrantManager, qdrant_manager
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_CHUNK_SIZE = 800
-DEFAULT_CHUNK_OVERLAP = 100
+DEFAULT_CHUNK_SIZE = 750   # tokens (not characters)
+DEFAULT_CHUNK_OVERLAP = 100  # tokens
 DEFAULT_TOP_K = 5
+
+# Heuristic: 1 token ≈ 4 chars for English (Latin), ≈ 2 chars for Russian (Cyrillic).
+_CYRILLIC_RE = re.compile(r'[\u0400-\u04FF]')
+
+
+def _estimate_tokens(text: str) -> int:
+    """Estimate token count using a language-aware heuristic.
+
+    For each word: if it contains Cyrillic characters, use 1 token per 2 chars;
+    otherwise use 1 token per 4 chars.  Minimum 1 token per word.
+    """
+    words = text.split()
+    tokens = 0
+    for word in words:
+        if _CYRILLIC_RE.search(word):
+            tokens += max(1, (len(word) + 1) // 2)
+        else:
+            tokens += max(1, (len(word) + 3) // 4)
+    return tokens
 
 
 def chunk_text(
@@ -25,9 +44,11 @@ def chunk_text(
     chunk_size: int = DEFAULT_CHUNK_SIZE,
     overlap: int = DEFAULT_CHUNK_OVERLAP,
 ) -> list[str]:
-    """Split text into overlapping chunks by character count.
+    """Split text into overlapping chunks by approximate token count.
 
-    Attempts to split at sentence boundaries for cleaner chunks.
+    Uses a language-aware heuristic (≈4 chars/token for English,
+    ≈2 chars/token for Russian).  Attempts to split at sentence
+    boundaries for cleaner chunks.
     """
     if not text.strip():
         return []
@@ -35,15 +56,28 @@ def chunk_text(
     sentences = re.split(r'(?<=[.!?])\s+', text)
     chunks: list[str] = []
     current_chunk = ""
+    current_tokens = 0
 
     for sentence in sentences:
-        if len(current_chunk) + len(sentence) > chunk_size and current_chunk:
+        sentence_tokens = _estimate_tokens(sentence)
+        if current_tokens + sentence_tokens > chunk_size and current_chunk:
             chunks.append(current_chunk.strip())
-            # Overlap: keep the tail of the current chunk
-            overlap_text = current_chunk[-overlap:] if overlap > 0 else ""
-            current_chunk = overlap_text + " " + sentence
+            # Overlap: walk backwards through words to collect ~overlap tokens
+            words = current_chunk.split()
+            overlap_words: list[str] = []
+            overlap_tokens = 0
+            for w in reversed(words):
+                w_tok = max(1, (len(w) + 1) // 2) if _CYRILLIC_RE.search(w) else max(1, (len(w) + 3) // 4)
+                if overlap_tokens + w_tok > overlap:
+                    break
+                overlap_words.append(w)
+                overlap_tokens += w_tok
+            overlap_text = " ".join(reversed(overlap_words))
+            current_chunk = (overlap_text + " " + sentence) if overlap_text else sentence
+            current_tokens = overlap_tokens + sentence_tokens
         else:
             current_chunk += (" " if current_chunk else "") + sentence
+            current_tokens += sentence_tokens
 
     if current_chunk.strip():
         chunks.append(current_chunk.strip())

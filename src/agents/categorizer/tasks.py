@@ -93,8 +93,64 @@ def poll_purchase_requests() -> dict[str, Any]:
 def check_rebid_deadlines() -> dict[str, Any]:
     """Periodic task: check if any requests need rebid (5 days passed or 3+ KPs)."""
     logger.info("Checking rebid deadlines...")
-    # This would query the database for requests that:
-    # 1. Were sent more than 5 days ago
-    # 2. Have received >= 3 KP responses
-    # For now, return placeholder
-    return {"status": "checked", "rebids_initiated": 0}
+
+    async def _check():
+        from sqlalchemy import text
+        from src.core.database import async_session
+        from src.agents.categorizer.agent import categorizer_agent
+
+        async with async_session() as session:
+            # Find kp_mailings where status='sent' AND either:
+            #   - 5 business days have elapsed since sent_at
+            #   - OR the purchase request already has >= 3 KP responses
+            query = text("""
+                SELECT km.id,
+                       km.purchase_request_id,
+                       pr.request_number,
+                       pr.external_id,
+                       km.sent_at,
+                       COALESCE(co_counts.response_count, 0) AS response_count
+                FROM kp_mailings km
+                JOIN purchase_requests pr ON pr.id = km.purchase_request_id
+                LEFT JOIN (
+                    SELECT purchase_request_id, COUNT(*) AS response_count
+                    FROM commercial_offers
+                    GROUP BY purchase_request_id
+                ) co_counts ON co_counts.purchase_request_id = km.purchase_request_id
+                WHERE km.status = 'sent'
+                  AND (
+                    -- 5 business days: add 7 calendar days (Mon-Fri sent),
+                    -- or 9 if sent on Sat/Sun; use generate_series to count
+                    -- only weekdays between sent_at and NOW().
+                    (SELECT COUNT(*)
+                     FROM generate_series(
+                         (km.sent_at::date + 1),
+                         NOW()::date,
+                         '1 day'::interval
+                     ) d
+                     WHERE EXTRACT(ISODOW FROM d) < 6
+                    ) >= 5
+                    OR COALESCE(co_counts.response_count, 0) >= 3
+                  )
+            """)
+            result = await session.execute(query)
+            rows = result.mappings().all()
+
+        rebid_results = []
+        for row in rows:
+            request_id = str(row["external_id"] or row["request_number"])
+            try:
+                res = await categorizer_agent.initiate_rebid(request_id)
+                rebid_results.append(res)
+                logger.info("Rebid initiated for request %s", request_id)
+            except Exception as e:
+                logger.error("Failed to initiate rebid for %s: %s", request_id, e, exc_info=True)
+                rebid_results.append({"request_id": request_id, "status": "error", "error": str(e)})
+
+        return {"status": "checked", "rebids_initiated": len(rebid_results), "results": rebid_results}
+
+    try:
+        return _run_async(_check())
+    except Exception as exc:
+        logger.error("check_rebid_deadlines failed: %s", exc, exc_info=True)
+        return {"status": "error", "error": str(exc)}

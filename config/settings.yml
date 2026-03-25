@@ -1,0 +1,61 @@
+# MAS AI System Configuration
+
+ollama:
+  base_url: "${OLLAMA_BASE_URL:-http://localhost:11434}"
+  models:
+    primary: "${OLLAMA_MODEL_PRIMARY:-qwen2.5:32b}"
+    fast: "${OLLAMA_MODEL_FAST:-qwen2.5:7b}"
+    embedding: "${OLLAMA_MODEL_EMBEDDING:-nomic-embed-text}"
+    vision: "${OLLAMA_MODEL_VISION:-llava:13b}"
+  timeout: 300
+  num_parallel: 4
+  fallback_enabled: true
+
+qdrant:
+  host: "${QDRANT_HOST:-localhost}"
+  port: 6333
+  grpc_port: 6334
+  collections:
+    tmc_catalog:
+      vector_size: 768
+      distance: Cosine
+    suppliers:
+      vector_size: 768
+      distance: Cosine
+    legal_standards:
+      vector_size: 768
+      distance: Cosine
+    legal_precedents:
+      vector_size: 768
+      distance: Cosine
+    travel_templates:
+      vector_size: 768
+      distance: Cosine
+
+rag:
+  chunk_size: 800
+  chunk_overlap: 100
+  top_k: 5
+  similarity_threshold: 0.7
+
+agents:
+  categorizer:
+    poll_interval_seconds: 300
+    similarity_threshold: 0.75
+    min_suppliers_for_rebid: 3
+    rebid_wait_days: 5
+    categories_min_count: 50
+  legal:
+    max_document_pages: 50
+    risk_levels: ["low", "medium", "high", "critical"]
+    mandatory_sections:
+      - "responsibility"
+      - "dispute_resolution"
+      - "warranty"
+      - "acceptance"
+      - "specifications"
+  travel:
+    vat_rate_services: 0.22
+    vat_rate_transport: 0.22
+    ocr_confidence_threshold: 0.9
+    smartway_poll_interval: 3600

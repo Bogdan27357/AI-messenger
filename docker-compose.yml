@@ -1,0 +1,205 @@
+version: "3.9"
+
+services:
+  # ============ Infrastructure ============
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: mas-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    environment:
+      - OLLAMA_NUM_PARALLEL=4
+      - OLLAMA_MAX_LOADED_MODELS=2
+    restart: unless-stopped
+    networks:
+      - mas-network
+
+  qdrant:
+    image: qdrant/qdrant:v1.9.7
+    container_name: mas-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    restart: unless-stopped
+    networks:
+      - mas-network
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: mas-postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init.sql
+    environment:
+      POSTGRES_DB: mas_db
+      POSTGRES_USER: mas_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mas_secret_password}
+    restart: unless-stopped
+    networks:
+      - mas-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: mas-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-mas_redis_password}
+    restart: unless-stopped
+    networks:
+      - mas-network
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: mas-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: mas_user
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-mas_rabbit_password}
+    restart: unless-stopped
+    networks:
+      - mas-network
+
+  minio:
+    image: minio/minio:latest
+    container_name: mas-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USER:-mas_minio_user}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:-mas_minio_password}
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+    networks:
+      - mas-network
+
+  # ============ Application ============
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mas-app
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src:/app/src
+      - ./config:/app/config
+      - ./templates:/app/templates
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+      - qdrant
+      - ollama
+      - minio
+    restart: unless-stopped
+    networks:
+      - mas-network
+
+  celery-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mas-celery-worker
+    command: celery -A src.core.celery_app worker -l info -c 4 -Q default,categorizer,legal,travel
+    volumes:
+      - ./src:/app/src
+      - ./config:/app/config
+      - ./templates:/app/templates
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+      - qdrant
+      - ollama
+    restart: unless-stopped
+    networks:
+      - mas-network
+
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mas-celery-beat
+    command: celery -A src.core.celery_app beat -l info
+    volumes:
+      - ./src:/app/src
+      - ./config:/app/config
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - rabbitmq
+    restart: unless-stopped
+    networks:
+      - mas-network
+
+  # ============ Monitoring ============
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: mas-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    restart: unless-stopped
+    networks:
+      - mas-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: mas-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+    restart: unless-stopped
+    networks:
+      - mas-network
+
+volumes:
+  ollama_data:
+  qdrant_data:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
+  minio_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  mas-network:
+    driver: bridge

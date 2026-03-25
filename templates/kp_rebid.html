@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; font-size: 14px; color: #333; }
+        .header { background: #e67e22; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; }
+        .highlight { background: #fdf2e9; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #e67e22; }
+        .footer { background: #f8f9fa; padding: 15px; font-size: 12px; color: #666; border-top: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>Переторжка — Запрос улучшенного КП</h2>
+        <p>Заявка № {{ request_number }}</p>
+    </div>
+
+    <div class="content">
+        <p>Уважаемые коллеги!</p>
+
+        <p>Благодарим вас за ранее направленное коммерческое предложение по заявке <strong>№ {{ request_number }}</strong>.</p>
+
+        <div class="highlight">
+            <p><strong>Наименование ТМЦ:</strong> {{ tmc_name }}</p>
+            {% if description %}
+            <p><strong>Описание:</strong> {{ description }}</p>
+            {% endif %}
+        </div>
+
+        <p>В рамках процедуры переторжки просим вас рассмотреть возможность предоставления <strong>улучшенных условий</strong> по следующим параметрам:</p>
+
+        <ul>
+            <li>Снижение стоимости</li>
+            <li>Сокращение сроков поставки</li>
+            <li>Улучшение условий оплаты</li>
+            <li>Расширение гарантийных обязательств</li>
+        </ul>
+
+        <p><strong>Срок подачи обновлённого КП: до {{ deadline_date }}</strong></p>
+
+        <p>Ответ просим направить на данный адрес электронной почты с указанием номера заявки <strong>{{ request_number }}</strong> в теме письма.</p>
+
+        <p>С уважением,<br>
+        Отдел закупок<br>
+        {{ company_name }}</p>
+    </div>
+
+    <div class="footer">
+        <p>Это письмо сформировано автоматически. Если вы получили его по ошибке, пожалуйста, сообщите отправителю.</p>
+    </div>
+</body>
+</html>
